@@ -1,0 +1,2 @@
+model_checkpoint_path: "/home/cai/PycharmProjects/Tensorflow_Start/seq2seq/s2s_checkpoint.tfl-160"
+all_model_checkpoint_paths: "/home/cai/PycharmProjects/Tensorflow_Start/seq2seq/s2s_checkpoint.tfl-160"
