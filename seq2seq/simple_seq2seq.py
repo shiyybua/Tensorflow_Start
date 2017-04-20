@@ -12,8 +12,8 @@ class TFLearnSeq2Seq(object):
         self.seq2seq_model = seq2seq_model or "embedding_rnn"
         self.in_seq_len = 10
         self.out_seq_len = 10
-        self.in_max_int = 9
-        self.out_max_int = 9
+        self.in_max_int = 20000
+        self.out_max_int = 20000
         self.n_input_symbols = self.in_max_int + 1
         self.n_output_symbols = self.out_max_int + 2		# extra one for GO symbol
         self.model_instance = None

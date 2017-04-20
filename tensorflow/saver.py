@@ -112,6 +112,7 @@ def load_checkpoint():
         path = ckpt.model_checkpoint_path:
     '''
     path = tf.train.latest_checkpoint('model/checkpoints/', latest_filename=None)
+    # path = tf.train.latest_checkpoint('/home/cai/Desktop/tflearn/examples/nlp/model/', latest_filename=None)
     saver = tf.train.Saver()
     with tf.Session() as sess:
         saver.restore(sess, path)
