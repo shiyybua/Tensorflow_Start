@@ -1,0 +1,7 @@
+歧义：
+有的版本把weight feed进去
+有的版本把上一轮attention state和state feed进去
+
+个人感觉weight 不应该feed 进去，这个是由内部自己更新的，一开始给一个初始值就行了
+attention state 和 state也没什么理由feed进去，每个batch的state本来就不相关，feed进去有何用？
+

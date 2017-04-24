@@ -13,3 +13,7 @@ with tf.Session() as sess:
     # embedding_lookup里面有不同的partition的方法，都大同小异。
     # feed_dict 还可以是多维度的。
     print sess.run(result, feed_dict={ids:[1,2,1]})
+
+'''
+    TODO: Callback
+'''
