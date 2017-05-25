@@ -60,6 +60,7 @@ class TFSeq2seq:
             opt = tf.train.AdamOptimizer(self.learning_rate)
             self.opt_op = opt.minimize(self.loss_func)
 
+
     def step(self, x, y):
         # TODO: 可能在这里添加token
         feed_dict = {}
@@ -72,9 +73,6 @@ class TFSeq2seq:
         ops = self.opt_op
 
         return feed_dict, ops
-
-
-
 
 
 

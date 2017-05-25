@@ -17,15 +17,25 @@ x = tf.constant(x, dtype=tf.float32)
 
 true_w = tf.transpose(true_w)   # Turn to 3 * 1
 
+# 真实值 label
 y = tf.nn.xw_plus_b(x, true_w, true_b)
 noise = tf.constant(np.random.rand(data_size, 1).astype(np.float32))
-y += noise  # add some noise.
+# y += noise  # add some noise.
 
 w = tf.Variable(tf.random_normal([3,1], mean=0.0, stddev=1.0, dtype=tf.float32, seed=None, name=None)
                      , dtype=tf.float32)
 b = tf.Variable(tf.zeros([1], dtype=tf.float32))
 
+# 需要训练的值
 y_hat = tf.nn.xw_plus_b(x, w, b)
+
+# TODO: 把y变成0，1
+
+while_condition = lambda x : x > 0
+def body(i):
+    print i
+    return [i]
+tf.while_loop(while_condition, body, [y])
 
 loss = tf.reduce_mean(tf.square(y_hat - y))
 optimizer = tf.train.GradientDescentOptimizer(0.1)
@@ -41,6 +51,3 @@ with tf.Session() as sess:
         sess.run(train)
         if i % 200 == 0:
             print sess.run(w), sess.run(b)
-
-tf.nn.softmax_cross_entropy_with_logits
-tf.nn
