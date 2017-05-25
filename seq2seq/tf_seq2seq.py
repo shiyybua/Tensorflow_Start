@@ -56,7 +56,7 @@ class TFSeq2seq:
         if not self.is_train:
             self.output = outputs
         else:
-            self.loss_func = sequence_loss(outputs, y, self.weight)
+            self.loss_func = sequence_loss(outputs, self.y, self.weight)
             opt = tf.train.AdamOptimizer(self.learning_rate)
             self.opt_op = opt.minimize(self.loss_func)
 

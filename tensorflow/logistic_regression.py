@@ -41,3 +41,6 @@ with tf.Session() as sess:
         sess.run(train)
         if i % 200 == 0:
             print sess.run(w), sess.run(b)
+
+tf.nn.softmax_cross_entropy_with_logits
+tf.nn
