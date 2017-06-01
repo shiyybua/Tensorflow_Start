@@ -3,7 +3,7 @@ import tensorflow as tf
 import numpy as np
 
 true_weight = [0.2, 0.5, 0.8]
-true_bias = 10
+true_bias = 30
 
 def sgd_saver():
     batch_size = 10
@@ -118,4 +118,26 @@ def load_checkpoint():
         saver.restore(sess, path)
         print sess.run(W), sess.run(b)
 
-load_checkpoint()
+#
+def load_2_models():
+    W = tf.Variable(tf.random_uniform([3, 1], -0.1, 1.0))
+    b = tf.Variable(tf.zeros([1]))
+
+    path = tf.train.latest_checkpoint('model/checkpoints/', latest_filename=None)
+    saver = tf.train.Saver()
+    with tf.Session() as sess:
+        saver.restore(sess, path)
+        print sess.run(W), sess.run(b)
+
+    with tf.Session() as sess:
+        saver.restore(sess, 'model/saver/model.ckpt')
+        print sess.run(W), sess.run(b)
+
+
+# 读取2个model，但是要放在2个session里面
+
+load_2_models()
+# load_checkpoint()
+# loader()
+
+# sgd_saver()
