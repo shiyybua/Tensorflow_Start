@@ -126,12 +126,15 @@ def load_2_models():
     path = tf.train.latest_checkpoint('model/checkpoints/', latest_filename=None)
     saver = tf.train.Saver()
     with tf.Session() as sess:
-        saver.restore(sess, path)
-        print sess.run(W), sess.run(b)
+        with tf.Session() as sess2:
+            saver.restore(sess, path)
+            print sess.run(W), sess.run(b)
 
-    with tf.Session() as sess:
-        saver.restore(sess, 'model/saver/model.ckpt')
-        print sess.run(W), sess.run(b)
+        # with tf.Session() as sess:
+            saver.restore(sess2, 'model/saver/model.ckpt')
+            print sess2.run(W), sess2.run(b)
+
+            print sess.run(W), sess.run(b)
 
 
 # 读取2个model，但是要放在2个session里面
