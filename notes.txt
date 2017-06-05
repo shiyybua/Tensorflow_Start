@@ -1,0 +1,9 @@
+tf.gradients(loss, embed) computes the partial derivative of the tensor loss with respect to the tensor embed.
+TensorFlow computes this partial derivative by backpropagation, so it is expected behavior that evaluating the
+result of tf.gradients(...) performs backpropagation. However, evaluating that tensor does not perform any variable
+updates, because the expression does not include any assignment operations.
+
+tf.stop_gradient() is an operation that acts as the identity function in the forward direction, but stops the
+accumulated gradient from flowing through that operator in the backward direction. It does not prevent backpropagation
+altogether, but instead prevents an individual tensor from contributing to the gradients that are computed for an
+expression. The documentation for the operation has more details about the operation, and when to use it.
