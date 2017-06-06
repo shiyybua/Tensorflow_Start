@@ -12,11 +12,13 @@ layer_id = 0
 
 
 def init_Weights(shape):
-    return tf.Variable(tf.random_normal(shape,dtype=tf.float32))
+    initial = tf.truncated_normal(shape, stddev=0.1)
+    return tf.Variable(initial)
 
 
 def init_Biases(shape):
-    return tf.Variable(tf.random_normal(shape, dtype=tf.float32))
+    initial = tf.constant(0.1, shape=shape)
+    return tf.Variable(initial)
 
 
 def conv_layer(x, W, b, activation_func=tf.nn.relu):
@@ -29,6 +31,9 @@ def conv_layer(x, W, b, activation_func=tf.nn.relu):
 def max_pool_2x2(x):
   return tf.nn.max_pool(x, ksize=[1, 2, 2, 1],
                         strides=[1, 2, 2, 1], padding='SAME')
+
+def dropout(x, keep_prob=0.5):
+    return tf.nn.dropout(x,keep_prob=keep_prob)
 
 
 def fc_layer(x,W,b,activation_func=tf.nn.relu):
@@ -58,6 +63,7 @@ W_fc1 = init_Weights([7*7*64, 1024])
 b_fc1 = init_Biases([1024])
 pooling1_flat = tf.reshape(pooling2,[-1, 7*7*64])
 fc1 = fc_layer(pooling1_flat,W_fc1,b_fc1)
+fc1 = dropout(fc1)
 
 W_fc2 = init_Weights([1024, 10])
 b_fc2 = init_Biases([10])
@@ -69,7 +75,7 @@ prediction = fc_layer(fc1,W_fc2,b_fc2,tf.nn.softmax)
 cross_entropy = tf.reduce_mean(
     tf.nn.softmax_cross_entropy_with_logits(labels=label, logits=prediction))
 
-optimizer = tf.train.AdamOptimizer(0.05)
+optimizer = tf.train.AdamOptimizer(1e-4)
 train = optimizer.minimize(cross_entropy)
 
 correct_prediction = tf.equal(tf.argmax(label,1), tf.argmax(prediction,1))
