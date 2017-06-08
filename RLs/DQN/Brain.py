@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 from collections import deque
+import random
 
 class DQN:
     def __init__(self, net_name, sess,image_shape=[210, 160, 3]):
@@ -17,6 +18,7 @@ class DQN:
         self.replace_target_iter = 100
         self.steps = 0
         self.batch_size = 64
+        self.gamma = 0.99
 
         with tf.name_scope(net_name):
             self._build_net()
@@ -92,6 +94,16 @@ class DQN:
         self.steps += 1
 
     def learn(self, target_net):
+        batch = random.sample(self.memory, self.batch_size)
+        observation_batch = [t[0] for t in batch]
+        action_batch = [t[1] for t in batch]
+        reward_batch = [t[2] for t in batch]
+        next_observation_batch = [t[3] for t in batch]
+
+        q_next = self.sess.run(target_net.net_ouput, feed_dict={target_net.observation: observation_batch})
+
+
+
         if self.steps % self.replace_target_iter == 0:
             translate = [tf.assign(e2, e1) for e1, e2 in zip(tf.get_collection('target_net'), tf.get_collection('Q_net'))]
             self.sess.run(translate)
