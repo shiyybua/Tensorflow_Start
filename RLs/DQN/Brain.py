@@ -1,16 +1,28 @@
 import tensorflow as tf
 import numpy as np
+from collections import deque
 
 class DQN:
-    def __init__(self, net_name, image_shape=[210, 160, 3]):
+    def __init__(self, net_name, sess,image_shape=[210, 160, 3]):
         '''
         :param image_shape: [height, width, channel], (210, 160, 3)
         '''
+        self.sess = sess
+        self.memory_size = 20000
+        self.memory = deque(maxlen=self.memory_size)
         self.image_shape = image_shape
         self.net_name = net_name
         self.observation = tf.placeholder(dtype=tf.float32, shape=[None] + self.image_shape) / 255.0
+        self.target_value = tf.placeholder(dtype=tf.float32, shape=[None, 4])
+        self.replace_target_iter = 100
+        self.steps = 0
+        self.batch_size = 64
+
         with tf.name_scope(net_name):
             self._build_net()
+
+        init = tf.global_variables_initializer()
+        self.sess.run(init)
 
     def _init_weight(self, shape):
         initial = tf.truncated_normal(shape, stddev=0.1)
@@ -61,7 +73,30 @@ class DQN:
         with tf.name_scope("fc2"):
             fc2_W = self._init_weight([1024, 4])
             fc2_b = self._init_biases([4])
-            self.net_ouput = self.fc_layer(fc1_ouput, fc2_W, fc2_b)
+            self.net_ouput = self.fc_layer(fc1_ouput, fc2_W, fc2_b, tf.nn.softmax)
+
+        with tf.name_scope("loss"):
+            self.loss = tf.reduce_mean(tf.squared_difference(self.net_ouput, self.target_value))
+            optimizer = tf.train.RMSPropOptimizer()
+            self.train = optimizer.minimize(self.loss)
+
+
+    def choose_action(self, observation):
+        # TODO: check
+        prob_weights = self.sess.run(self.self.net_ouput, feed_dict={self.observation: observation[np.newaxis, :]})
+        action = np.random.choice(range(prob_weights.shape[1]), p=prob_weights.ravel())
+        return action
+
+    def store_transition(self, observation, action, reward, _observation):
+        self.memory.append((observation, action, reward, _observation))
+        self.steps += 1
+
+    def learn(self, target_net):
+        if self.steps % self.replace_target_iter == 0:
+            translate = [tf.assign(e2, e1) for e1, e2 in zip(tf.get_collection('target_net'), tf.get_collection('Q_net'))]
+            self.sess.run(translate)
+
+
 
 
 class Brain():
