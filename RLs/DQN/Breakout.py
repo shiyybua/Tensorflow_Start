@@ -4,6 +4,7 @@ sys.path.append('/Users/mac/PycharmProjects/Tensorflow_Start')
 import gym
 import tensorflow as tf
 from RLs.DQN.Brain import DQN
+import time
 
 env = gym.make('Breakout-v0')
 env.seed(1)     # reproducible.
@@ -15,11 +16,12 @@ print(env.observation_space)
 
 RESOURCE_PATH = '../../resource/'
 train = True
+is_gpu_available = None #otherwise: e.g. ['/gpu:2', '/gpu:3']
 
 if __name__ == '__main__':
-    with tf.Session() as sess:
-        Q_net = DQN("Q_net",sess)
-        target_net = DQN("target_net",sess)
+    with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
+        Q_net = DQN("Q_net",sess,is_gpu_available=is_gpu_available)
+        target_net = DQN("target_net",sess,is_gpu_available=is_gpu_available)
 
         saver = tf.train.Saver()
         ckpt = tf.train.get_checkpoint_state(RESOURCE_PATH)
@@ -32,10 +34,15 @@ if __name__ == '__main__':
         step = 0
         merged = tf.summary.merge_all()
         for episode in range(epoch):
+            start = time.time()
             observation = env.reset()
+
+            if episode % 100 == 0 and episode != 0:
+                saver.save(sess, RESOURCE_PATH + 'DQN_checkpoints', global_step=episode)
+
             while True:
                 # fresh env
-                env.render()
+                # env.render()
                 action = Q_net.choose_action(observation)
                 observation_, reward, done, _ = env.step(action)
                 Q_net.store_transition(observation,action,reward,observation_)
@@ -48,15 +55,11 @@ if __name__ == '__main__':
                 step += 1
 
                 if done:
+                    print episode
+                    end = time.time()
+                    print end - start
+                    print
                     break
-
-                if episode % 100 == 0 and episode != 0:
-                    saver.save(sess, RESOURCE_PATH + 'DQN_checkpoints', global_step=episode)
-
-                if step == 100:
-                    saver.save(sess, RESOURCE_PATH + 'DQN_checkpoints', global_step=episode)
-
-            print episode
 
 
 

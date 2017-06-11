@@ -6,7 +6,7 @@ from collections import deque
 import random
 
 class DQN:
-    def __init__(self, net_name, sess,image_shape=[210, 160, 3]):
+    def __init__(self, net_name, sess,is_gpu_available=None, image_shape=[210, 160, 3]):
         '''
         :param image_shape: [height, width, channel], (210, 160, 3)
         '''
@@ -25,7 +25,12 @@ class DQN:
         self.epsilon = 0.9
 
         with tf.name_scope(net_name):
-            self._build_net()
+            if is_gpu_available is not None:
+                for d in is_gpu_available:
+                    with tf.device(d):
+                        self._build_net()
+            else:
+                self._build_net()
 
         init = tf.global_variables_initializer()
         self.sess.run(init)
