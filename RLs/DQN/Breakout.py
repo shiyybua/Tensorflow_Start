@@ -46,7 +46,7 @@ if __name__ == '__main__':
                 action = Q_net.choose_action(observation)
                 observation_, reward, done, _ = env.step(action)
                 Q_net.store_transition(observation,action,reward,observation_)
-
+                observation = observation_
 
                 if train and (step > 200) and (step % 5 == 0):
                     Q_net.learn(target_net, merged, train_writer)
