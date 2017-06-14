@@ -19,11 +19,13 @@ for episode in range(epoch):
     while True:
         # fresh env
         env.render()
-        observation_, reward, done, info = env.step(1)
+        observation_, reward, done, info = env.step(0)
+
+        observation = observation_
+        print reward
         if done:
             break
     print episode
-from tensorflow.contrib.rnn import BasicRNNCell
 
 
 
