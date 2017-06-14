@@ -32,8 +32,7 @@ class DQN:
             else:
                 self._build_net()
 
-        init = tf.global_variables_initializer()
-        self.sess.run(init)
+
 
     def variable_summaries(self, var):
         """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
@@ -118,6 +117,7 @@ class DQN:
     def choose_action(self, observation):
         prob_weights = self.sess.run(self.net_ouput, feed_dict={self.observation: observation[np.newaxis, :]})
         prob_weights = prob_weights.ravel()
+        return np.argmax(prob_weights)
         if np.random.uniform() < self.epsilon:
             return np.argmax(prob_weights)
         else:
@@ -144,7 +144,7 @@ class DQN:
                                              self.action: action_batch})
 
         if self.steps % self.replace_target_iter == 0:
-            translate = [tf.assign(e2, e1) for e1, e2 in zip(tf.get_collection('target_net'), tf.get_collection('Q_net'))]
+            translate = [tf.assign(e1, e2) for e1, e2 in zip(tf.get_collection('target_net'), tf.get_collection('Q_net'))]
             self.sess.run(translate)
 
         tf.summary.scalar('reward', sum(reward_batch) * 1.0 / len(reward_batch))
