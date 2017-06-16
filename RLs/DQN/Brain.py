@@ -112,12 +112,10 @@ class DQN:
             optimizer = tf.train.RMSPropOptimizer(1e-6)
             self.train = optimizer.minimize(self.loss)
 
-
-
     def choose_action(self, observation):
         prob_weights = self.sess.run(self.net_ouput, feed_dict={self.observation: observation[np.newaxis, :]})
         prob_weights = prob_weights.ravel()
-        return np.argmax(prob_weights)
+        # return np.argmax(prob_weights)
         if np.random.uniform() < self.epsilon:
             return np.argmax(prob_weights)
         else:
@@ -140,7 +138,7 @@ class DQN:
 
         # convert action into one-hot representation
         action_batch = np.eye(4)[action_batch]
-        _, summary= self.sess.run([self.train, merged], feed_dict={self.observation: observation_batch, self.target_value:y,
+        _, summary = self.sess.run([self.train, merged], feed_dict={self.observation: observation_batch, self.target_value:y,
                                              self.action: action_batch})
 
         if self.steps % self.replace_target_iter == 0:
