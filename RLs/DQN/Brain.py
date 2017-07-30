@@ -18,7 +18,7 @@ class DQN:
         self.observation = tf.placeholder(dtype=tf.float32, shape=[None] + self.image_shape) / 255.0
         self.target_value = tf.placeholder(dtype=tf.float32, shape=[None, 1])
         self.action = tf.placeholder(dtype=tf.float32, shape=[None, 4])
-        self.replace_target_iter = 100
+        self.replace_target_iter = 0
         self.steps = 0
         self.batch_size = 64
         self.gamma = 0.9
@@ -141,12 +141,18 @@ class DQN:
         _, summary = self.sess.run([self.train, merged], feed_dict={self.observation: observation_batch, self.target_value:y,
                                              self.action: action_batch})
 
-        if self.steps % self.replace_target_iter == 0:
+        self.replace_target_iter += 1
+        if self.replace_target_iter % 5 == 0:
+            print 'translated'
             translate = [tf.assign(e1, e2) for e1, e2 in zip(tf.get_collection('target_net'), tf.get_collection('Q_net'))]
             self.sess.run(translate)
+            self.replace_target_iter = 0
 
         tf.summary.scalar('reward', sum(reward_batch) * 1.0 / len(reward_batch))
         train_writer.add_summary(summary, self.steps)
+
+        print self.sess.run(self.loss, feed_dict={self.observation: observation_batch, self.target_value:y,
+                                             self.action: action_batch})
 
 
 

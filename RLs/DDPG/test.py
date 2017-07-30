@@ -1,5 +1,14 @@
 import tensorflow as tf
+import gym
 
-import numpy as np
+ENV_NAME = 'Pong-v0'
 
-print np.clip(np.random.normal(-1, 7), 0, 5)
+env = gym.make(ENV_NAME)
+env = env.unwrapped
+env.seed(1)
+
+s_dim = env.observation_space
+a_dim = env.action_space
+
+print s_dim
+print a_dim

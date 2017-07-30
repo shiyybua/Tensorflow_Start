@@ -3,7 +3,6 @@ from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten
 from keras.layers import Conv2D, MaxPooling2D
 import keras
-from keras.datasets import cifar10
 
 from tensorflow.examples.tutorials.mnist import input_data
 mnist = input_data.read_data_sets('../resource/MNIST_data', one_hot=True)
@@ -39,7 +38,7 @@ x_train = x_train.reshape((-1, 28, 28, 1))
 x_test = x_test.reshape((-1, 28, 28, 1))
 
 if True:
-    model.fit(x_train, y_train, epochs=1)
+    model.fit(x_train, y_train, epochs=10)
     model.save_weights('./weights')
 else:
     model.load_weights('./weights')

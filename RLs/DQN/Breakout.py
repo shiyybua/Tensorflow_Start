@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*
 import sys
-sys.path.append('/home/cai/PycharmPro/Tensorflow_Start')
+sys.path.append('/Users/mac/PycharmProjects/Tensorflow_Start')
 import gym
 import tensorflow as tf
 from RLs.DQN.Brain import DQN
@@ -14,7 +14,7 @@ epoch = 1000
 print(env.action_space)
 print(env.observation_space)
 
-RESOURCE_PATH = '/home/cai/PycharmPro/resource/DQN'
+RESOURCE_PATH = '/Users/mac/PycharmProjects/Tensorflow_Start/resource/DQN/'
 train = True
 is_gpu_available = None #otherwise: e.g. ['/gpu:2', '/gpu:3']
 
@@ -40,8 +40,8 @@ if __name__ == '__main__':
             start = time.time()
             observation = env.reset()
 
-            # if episode % 100 == 0 and episode != 0:
-            #     saver.save(sess, RESOURCE_PATH + 'DQN_checkpoints', global_step=episode)
+            if train and episode % 100 == 0 and episode != 0:
+                saver.save(sess, RESOURCE_PATH + 'DQN_checkpoints', global_step=episode)
 
             while True:
                 # fresh env
@@ -51,9 +51,8 @@ if __name__ == '__main__':
                 Q_net.store_transition(observation,action,reward,observation_)
                 observation = observation_
 
-                # if train and (step > 200) and (step % 5 == 0):
-                #     Q_net.learn(target_net, merged, train_writer)
-                print step
+                if train and (step > 200) and (step % 20 == 0):
+                    Q_net.learn(target_net, merged, train_writer)
 
                 step += 1
 
