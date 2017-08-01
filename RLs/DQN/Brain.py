@@ -5,8 +5,9 @@ import numpy as np
 from collections import deque
 import random
 
+
 class DQN:
-    def __init__(self, net_name, sess,is_gpu_available=None, image_shape=[210, 160, 3]):
+    def __init__(self, net_name, sess,is_gpu_available=None, image_shape=[84, 84, 1]):
         '''
         :param image_shape: [height, width, channel], (210, 160, 3)
         '''
@@ -70,26 +71,26 @@ class DQN:
     def _build_net(self):
         with tf.name_scope("conv1"):
             # [None] + self.image_shape
-            conv1_W = self._init_weight([10,10,3,32])
+            conv1_W = self._init_weight([10,10,1,32])
             conv1_b = self._init_biases([32])
             conv1_output = self.conv_layer(self.observation, conv1_W, conv1_b)
-            conv1_output = self.max_pooling(conv1_output)   # 105 * 80
+            conv1_output = self.max_pooling(conv1_output)   # 42 * 42
 
         with tf.name_scope("conv2"):
             conv2_W = self._init_weight([10,10,32,64])
             conv2_b = self._init_biases([64])
             conv2_output = self.conv_layer(conv1_output, conv2_W, conv2_b)
-            conv2_output = self.max_pooling(conv2_output)    # 53 * 40
+            conv2_output = self.max_pooling(conv2_output)    # 21 * 21
 
         with tf.name_scope("conv3"):
             conv3_W = self._init_weight([10,10,64,64])
             conv3_b = self._init_biases([64])
             conv3_output = self.conv_layer(conv2_output, conv3_W, conv3_b)
-            conv3_output = self.max_pooling(conv3_output)    # 27 * 20
+            conv3_output = self.max_pooling(conv3_output)    # 11 * 11
 
         with tf.name_scope("fc1"):
-            conv3_flat = tf.reshape(conv3_output, [-1, 27*20*64])
-            fc1_W = self._init_weight([27*20*64, 1024])
+            conv3_flat = tf.reshape(conv3_output, [-1, 11*11*64])
+            fc1_W = self._init_weight([11*11*64, 1024])
             fc1_b = self._init_biases([1024])
             fc1_ouput = self.fc_layer(conv3_flat, fc1_W, fc1_b)
             fc1_ouput = tf.nn.dropout(fc1_ouput,keep_prob=0.5)

@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*
 import sys
-sys.path.append('/Users/mac/PycharmProjects/Tensorflow_Start')
+sys.path.append('/home/caiww/code')
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 import gym
 import tensorflow as tf
-from RLs.DQN.Brain import DQN
+from DQN.Brain import DQN
 import time
+from state_processor import StateProcessor
 
 env = gym.make('Breakout-v0')
 env.seed(1)     # reproducible.
@@ -14,7 +17,7 @@ epoch = 1000
 print(env.action_space)
 print(env.observation_space)
 
-RESOURCE_PATH = '/Users/mac/PycharmProjects/Tensorflow_Start/resource/DQN/'
+RESOURCE_PATH = '../resource/DQN/'
 train = True
 is_gpu_available = None #otherwise: e.g. ['/gpu:2', '/gpu:3']
 
@@ -36,18 +39,23 @@ if __name__ == '__main__':
                                              sess.graph)
         step = 0
         merged = tf.summary.merge_all()
+
+        image_processor = StateProcessor()
         for episode in range(epoch):
             start = time.time()
             observation = env.reset()
-
+            observation = image_processor.process(observation)
             if train and episode % 100 == 0 and episode != 0:
                 saver.save(sess, RESOURCE_PATH + 'DQN_checkpoints', global_step=episode)
 
             while True:
                 # fresh env
-                env.render()
+                # env.render()
+
                 action = Q_net.choose_action(observation)
                 observation_, reward, done, _ = env.step(action)
+
+                observation_ = image_processor.process(observation_)
                 Q_net.store_transition(observation,action,reward,observation_)
                 observation = observation_
 

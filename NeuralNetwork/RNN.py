@@ -38,7 +38,6 @@ with tf.Session() as sess:
         batch_xs, batch_ys = mnist.train.next_batch(batch_size)
         sess.run(train, feed_dict={data: batch_xs, labels: batch_ys})
 
-
         if i % 50 == 0:
             print(sess.run(accuracy, feed_dict={data: batch_xs, labels: batch_ys}))
 
