@@ -17,12 +17,14 @@ z2 = w3 + w4
 
 l = [tf.convert_to_tensor([10.]), tf.convert_to_tensor([20.])]
 # Do not calculate any thing.
-grads = tf.gradients([z1, z2], [w1, w2, w3, w4], grad_ys=l)
+grads = tf.gradients([z1, z2], [w1, w2, w3, w4])
+grads2 = tf.gradients([z1, z2], [w1, w2, w3, w4], grad_ys=grads)
 
 # grads = tf.gradients([z1, z2], [w1, w2, w3, w4], grad_ys=[tf.convert_to_tensor([2.,2.,3.]),
 #                                                           tf.convert_to_tensor([3.,2.,4.])])
 opt = tf.train.AdamOptimizer(0.05)
 train = opt.apply_gradients(zip(grads, [w1,w2,w3,w4]))
+train2 = opt.apply_gradients(zip(grads2, [w1,w2,w3,w4]))
 
 with tf.Session() as sess:
     tf.global_variables_initializer().run()
@@ -35,4 +37,5 @@ with tf.Session() as sess:
         # print 'l', sess.run(l)
         # sess.run(zip(train,(w1,w2,w3,w4)))
         sess.run(train)
+        sess.run(train2)
         print
