@@ -12,7 +12,7 @@ class DQN:
         :param image_shape: [height, width, channel], (210, 160, 3)
         '''
         self.sess = sess
-        self.memory_size = 20000
+        self.memory_size = 10000
         self.memory = deque(maxlen=self.memory_size)
         self.image_shape = image_shape
         self.net_name = net_name
@@ -90,25 +90,26 @@ class DQN:
 
         with tf.name_scope("fc1"):
             conv3_flat = tf.reshape(conv3_output, [-1, 11*11*64])
-            fc1_W = self._init_weight([11*11*64, 1024])
-            fc1_b = self._init_biases([1024])
+            fc1_W = self._init_weight([11*11*64, 620])
+            fc1_b = self._init_biases([620])
             fc1_ouput = self.fc_layer(conv3_flat, fc1_W, fc1_b)
             fc1_ouput = tf.nn.dropout(fc1_ouput,keep_prob=0.5)
 
         with tf.name_scope("fc2"):
-            fc2_W = self._init_weight([1024, 4])
+            fc2_W = self._init_weight([620, 4])
             fc2_b = self._init_biases([4])
 
             self.variable_summaries(fc2_W)
             self.variable_summaries(fc2_b)
 
             # 把算出的值直接当Value值，则不能加softmax
-            self.net_ouput = self.fc_layer(fc1_ouput, fc2_W, fc2_b, None)
+            self.net_ouput = self.fc_layer(fc1_ouput, fc2_W, fc2_b, tf.nn.tanh)
 
         with tf.name_scope("loss"):
             Q_action = tf.reduce_sum(tf.multiply(self.net_ouput, self.action), axis=1)
+            # Q_action = self.net_ouput
             self.loss = tf.reduce_mean(tf.square(self.target_value - Q_action))
-            optimizer = tf.train.RMSPropOptimizer(1e-6)
+            optimizer = tf.train.RMSPropOptimizer(0.01)
             self.train = optimizer.minimize(self.loss)
 
     def choose_action(self, observation):
@@ -133,6 +134,7 @@ class DQN:
 
         q_next = self.sess.run(target_net.net_ouput, feed_dict={target_net.observation: next_observation_batch})
         y = reward_batch + self.gamma * np.max(q_next, axis=1)
+        # y = reward_batch + self.gamma * q_next
         y = y.reshape([self.batch_size,1])
 
         # convert action into one-hot representation
@@ -141,17 +143,19 @@ class DQN:
                                              self.action: action_batch})
 
         self.replace_target_iter += 1
-        if self.replace_target_iter % 5 == 0:
+        if self.replace_target_iter % 500 == 0:
             print 'translated'
             translate = [tf.assign(e1, e2) for e1, e2 in zip(tf.get_collection('target_net'), tf.get_collection('Q_net'))]
             self.sess.run(translate)
             self.replace_target_iter = 0
 
+            print self.sess.run(self.loss, feed_dict={self.observation: observation_batch, self.target_value: y,
+                                                      self.action: action_batch})
+
         tf.summary.scalar('reward', sum(reward_batch) * 1.0 / len(reward_batch))
         train_writer.add_summary(summary, self.steps)
 
-        print self.sess.run(self.loss, feed_dict={self.observation: observation_batch, self.target_value:y,
-                                             self.action: action_batch})
+
 
 
 

@@ -9,9 +9,13 @@ from DQN.Brain import DQN
 import time
 from state_processor import StateProcessor
 
+from gym import wrappers
 env = gym.make('Breakout-v0')
-env.seed(1)     # reproducible.
-env = env.unwrapped
+env = wrappers.Monitor(env, './video', force=True, video_callable=lambda x: x % 20 == 0)
+
+# env = gym.make('Breakout-v0')
+# env.seed(1)     # reproducible.
+# env = env.unwrapped
 epoch = 1000
 
 print(env.action_space)
@@ -59,7 +63,7 @@ if __name__ == '__main__':
                 Q_net.store_transition(observation,action,reward,observation_)
                 observation = observation_
 
-                if train and (step > 200) and (step % 20 == 0):
+                if train and (step > 5000):
                     Q_net.learn(target_net, merged, train_writer)
 
                 step += 1
