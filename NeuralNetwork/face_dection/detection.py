@@ -4,7 +4,7 @@ import csv
 import numpy as np
 import random
 
-IMG_PATH = '../../resource/faces/training.csv'
+IMG_PATH = '../../resource/faces/valid_training.csv'
 
 epoch = 10000
 batch_size = 64
@@ -44,7 +44,8 @@ def get_batch(data, header):
     label_batch = []
     for element in batch:
         try:
-            traning_data = [float(element[colunm]) for colunm in header[:-1]]
+            # 做归一化
+            traning_data = [float(element[colunm]) / 96.0 for colunm in header[:-1]]
         except:
             print element[colunm]
             exit()
@@ -118,7 +119,7 @@ optimizer = tf.train.AdamOptimizer(1e-4)
 train = optimizer.minimize(loss)
 
 
-all_images = load_images(1000)
+all_images = load_images()
 header = load_header()
 
 init = tf.global_variables_initializer()
@@ -132,4 +133,4 @@ with tf.Session() as sess:
         sess.run(train, feed_dict={image:batch_xs,
                                    label:batch_ys})
         if i % 50 == 0:
-            print(sess.run(loss, feed_dict={image:batch_xs, label:batch_ys}))
+            print sess.run(loss, feed_dict={image:batch_xs, label:batch_ys})
