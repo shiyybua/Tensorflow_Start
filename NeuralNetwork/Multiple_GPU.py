@@ -3,7 +3,7 @@ import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
 import os
 import time
-# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
 mnist = input_data.read_data_sets('../resource/MNIST_data', one_hot=True)
 
 
@@ -11,6 +11,7 @@ epoch = 10000
 batch_size = 64
 layer_id = 0
 num_devices = 1
+device = 'gpu'
 
 
 class Net:
@@ -98,7 +99,7 @@ def average_gradients(tower_grads):
             grads.append(expanded_g)
 
         # Average over the 'tower' dimension.
-        grad = tf.concat(0, grads)
+        grad = tf.concat(grads, 0)
         grad = tf.reduce_mean(grad, 0)
 
         # Keep in mind that the Variables are redundant because they are shared
@@ -112,23 +113,24 @@ def average_gradients(tower_grads):
 
 def build_graph():
     # a high learning rate could not learn anything.
-    optimizer = tf.train.AdamOptimizer(1e-4)
     # gradient = tf.gradients(self.cross_entropy, tf.trainable_variables())
     #
     # self.train = self.optimizer.apply_gradients(zip(gradient, tf.trainable_variables()))
 
     with tf.variable_scope(tf.get_variable_scope()):
+        optimizer = tf.train.GradientDescentOptimizer(0.1)
+        # optimizer = tf.train.AdamOptimizer(1e-4)
         tower_grads = []
         nets = []
         for i in xrange(num_devices):
-            with tf.device('/cpu:%d' % i):
+            with tf.device('/%s:%d' % (device,i)):
                 with tf.name_scope('%s_%d' % ("CNN_mnist", i)) as scope:
                     net = Net(scope)
                     nets.append(net)
                     loss = net.cross_entropy
                     tf.get_variable_scope().reuse_variables()
                     gradient = optimizer.compute_gradients(loss)
-                    tower_grads.append(gradient)
+                    tower_grads.append(gradient[-8:])
 
         grads = average_gradients(tower_grads)
         apply_gradient_op = optimizer.apply_gradients(grads)
@@ -139,43 +141,23 @@ def build_graph():
 if __name__ == '__main__':
     apply_gradient_op, nets = build_graph()
 
+    start = time.time()
     with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
         sess.run(tf.global_variables_initializer())
         for i in range(epoch):
-            # for net in nets:
-            batch_xs, batch_ys = mnist.train.next_batch(10)
-            sess.run(apply_gradient_op, feed_dict={nets[0].image: batch_xs,
-                                           nets[0].label: batch_ys})
+            feed_data = {}
+            for index, net in enumerate(nets):
+                batch_xs, batch_ys = mnist.train.next_batch(10)
+                feed_data[net.image] = batch_xs
+                feed_data[net.label] = batch_ys
+            sess.run(apply_gradient_op, feed_dict=feed_data)
+
             if i % 50 == 0:
-                print(sess.run(nets[0].accuracy, feed_dict={nets[0].image:mnist.test.images,
+                print(time.time()-start, sess.run(nets[0].accuracy, feed_dict={nets[0].image:mnist.test.images,
                                                             nets[0].label: mnist.test.labels}))
 
 
-
-
-
-# init = tf.global_variables_initializer()
-# with tf.Session() as sess:
-#     sess.run(init)
-#     start = time.time()
-#     for i in range(epoch):
-#         tower_grads = []
-#         for i in xrange(NUM_GPUS):
-#             with tf.device('/gpu:%d' % i):
-#                 with tf.name_scope('%s_%d' % ("tower", i)) as scope:
-#                     batch_xs, batch_ys = mnist.train.next_batch(10)
-#                     gradient = tf.gradients(cross_entropy, tf.trainable_variables())
-#                     tower_grads.append(gradient)
-#         grads = average_gradients(tower_grads)
-#         apply_gradient_op = optimizer.apply_gradients(grads)
-#
-#
-#         sess.run(apply_gradient_op, feed_dict={image:batch_xs,
-#                                    label:batch_ys})
-
-
-
-
-# if i % 50 == 0:
-#     print(sess.run(accuracy, feed_dict={image: mnist.test.images,
-#                                         label: mnist.test.labels}), ' --> ', time.time() - start)
+# sess.run(apply_gradient_op, feed_dict={nets[0].image:batch_xs,
+#                                                    nets[0].label: batch_ys,
+#                                                    nets[1].image:batch_xs1,
+#                                                    nets[1].label: batch_ys1})
