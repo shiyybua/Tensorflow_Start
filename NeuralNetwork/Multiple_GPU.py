@@ -10,8 +10,8 @@ mnist = input_data.read_data_sets('../resource/MNIST_data', one_hot=True)
 epoch = 10000
 batch_size = 64
 layer_id = 0
-num_devices = 1
-device = 'gpu'
+num_devices = 2
+device = 'cpu'
 
 
 class Net:

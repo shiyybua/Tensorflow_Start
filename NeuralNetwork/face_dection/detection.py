@@ -3,18 +3,31 @@ import tensorflow as tf
 import csv
 import numpy as np
 import random
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+from matplotlib.pyplot import savefig
+
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+
 
 IMG_PATH = '../../resource/faces/valid_training.csv'
+IMG_PATH = './resource/valid_training.csv'
+TEST_PATH = './resource/test.csv'
 
-epoch = 10000
+IMAGE_SAVE_PATH = './resource/images/'
+
+epoch = 20000
 batch_size = 64
 layer_id = 0
 
 
-def load_images(image_num=None):
+def load_images(image_num=None, path=IMG_PATH):
     num = 0
     all_images = []
-    with open(IMG_PATH, 'r') as csvfile:
+    with open(path, 'r') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
             if type(image_num) is int:
@@ -27,8 +40,8 @@ def load_images(image_num=None):
     return all_images
 
 
-def load_header():
-    with open(IMG_PATH, 'r') as csvfile:
+def load_header(path=IMG_PATH):
+    with open(path, 'r') as csvfile:
         header = csvfile.readline().strip().split(',')
         return header
 
@@ -109,7 +122,8 @@ fc1 = dropout(fc1)
 
 W_fc2 = init_Weights([1024, 30])
 b_fc2 = init_Biases([30])
-prediction = fc_layer(fc1,W_fc2,b_fc2,tf.nn.softmax)
+# prediction = fc_layer(fc1,W_fc2,b_fc2,tf.nn.softmax)
+prediction = tf.nn.sigmoid(tf.nn.xw_plus_b(fc1,W_fc2,b_fc2))
 
 # cross_entropy = tf.reduce_mean(
 #     tf.nn.softmax_cross_entropy_with_logits(labels=label, logits=prediction))
@@ -122,15 +136,44 @@ train = optimizer.minimize(loss)
 all_images = load_images()
 header = load_header()
 
+training_valid_rate = 0.9
+training_img = all_images[:int(training_valid_rate*len(all_images))]
+test_img = all_images[int(training_valid_rate*len(all_images)):]
+
 init = tf.global_variables_initializer()
 with tf.Session() as sess:
     sess.run(init)
     for i in range(epoch):
-        batch_xs, batch_ys = get_batch(all_images, header)
+        batch_xs, batch_ys = get_batch(training_img, header)
         # 以下这个形式是错的，因为每次next batch 会随机产生不同的数据
         # batch_xs = mnist.train.next_batch(batch_size)[0]
         # batch_ys = mnist.train.next_batch(batch_size)[1]
         sess.run(train, feed_dict={image:batch_xs,
                                    label:batch_ys})
         if i % 50 == 0:
-            print sess.run(loss, feed_dict={image:batch_xs, label:batch_ys})
+            batch_xs, batch_ys = get_batch(test_img, header)
+            local_loss, local_pred = sess.run([loss, prediction], feed_dict={image:batch_xs, label:batch_ys})
+            # print local_pred
+            print local_loss
+            print '-' * 100
+
+        if i == epoch - 1:
+            batch_xs, batch_ys = get_batch(test_img, header)
+
+            local_pred = sess.run(prediction, feed_dict={image: batch_xs})
+
+            for index, (x, y) in enumerate(zip(batch_xs, local_pred)):
+                X = []
+                Y = []
+                for e, element in enumerate(y):
+                    element *= 96
+                    if e % 2 == 0:
+                        X.append(element)
+                    else:
+                        Y.append(element)
+
+                x = x.reshape([96, 96])
+                plt.imshow(x)
+                plt.scatter(X, Y, c='red')
+                savefig(IMAGE_SAVE_PATH + '%d.jpg' % index)
+                plt.clf()
