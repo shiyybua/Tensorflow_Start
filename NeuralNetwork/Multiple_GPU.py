@@ -7,11 +7,11 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
 mnist = input_data.read_data_sets('../resource/MNIST_data', one_hot=True)
 
 
-epoch = 10000
+epoch = 20000
 batch_size = 64
 layer_id = 0
 num_devices = 2
-device = 'cpu'
+device = 'gpu'
 
 
 class Net:
@@ -91,6 +91,7 @@ def average_gradients(tower_grads):
         # Note that each grad_and_vars looks like the following:
         #   ((grad0_gpu0, var0_gpu0), ... , (grad0_gpuN, var0_gpuN))
         grads = []
+
         for g, _ in grad_and_vars:
             # Add 0 dimension to the gradients to represent the tower.
             expanded_g = tf.expand_dims(g, 0)
@@ -105,6 +106,8 @@ def average_gradients(tower_grads):
         # Keep in mind that the Variables are redundant because they are shared
         # across towers. So .. we will just return the first tower's pointer to
         # the Variable.
+
+        # 只取了net0中的gradient的variables
         v = grad_and_vars[0][1]
         grad_and_var = (grad, v)
         average_grads.append(grad_and_var)
@@ -133,13 +136,17 @@ def build_graph():
                     tower_grads.append(gradient[-8:])
 
         grads = average_gradients(tower_grads)
+        # 感觉这个grads没有分发出来, 或者找出variable share的代码。
         apply_gradient_op = optimizer.apply_gradients(grads)
+
     return apply_gradient_op, nets
 
 
 
 if __name__ == '__main__':
     apply_gradient_op, nets = build_graph()
+    translate = [tf.assign(e1, e2) for e1, e2 in zip(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, 'CNN_mnist_1'),
+                                                     tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, 'CNN_mnist_0'))]
 
     start = time.time()
     with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
@@ -151,9 +158,11 @@ if __name__ == '__main__':
                 feed_data[net.image] = batch_xs
                 feed_data[net.label] = batch_ys
             sess.run(apply_gradient_op, feed_dict=feed_data)
+            sess.run(translate)
 
             if i % 50 == 0:
-                print(time.time()-start, sess.run(nets[0].accuracy, feed_dict={nets[0].image:mnist.test.images,
+                # print nets[0].cross_entropy.name
+                print(time.time()-start, sess.run([nets[0].accuracy, nets[0].cross_entropy], feed_dict={nets[0].image:mnist.test.images,
                                                             nets[0].label: mnist.test.labels}))
 
 

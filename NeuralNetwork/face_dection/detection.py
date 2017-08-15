@@ -19,7 +19,7 @@ TEST_PATH = './resource/test.csv'
 
 IMAGE_SAVE_PATH = './resource/images/'
 
-epoch = 20000
+epoch = 300
 batch_size = 64
 layer_id = 0
 
@@ -158,8 +158,9 @@ with tf.Session() as sess:
             print '-' * 100
 
         if i == epoch - 1:
-            batch_xs, batch_ys = get_batch(test_img, header)
-
+            # batch_xs, batch_ys = get_batch(test_img, header)
+            batch_xs = load_images(image_num=200, path=TEST_PATH)
+            batch_xs = [x['Image'] for x in batch_xs]
             local_pred = sess.run(prediction, feed_dict={image: batch_xs})
 
             for index, (x, y) in enumerate(zip(batch_xs, local_pred)):
