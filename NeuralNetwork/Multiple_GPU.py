@@ -142,12 +142,24 @@ def build_graph():
     return apply_gradient_op, nets
 
 
+def value_translation():
+    '''
+    把net0中的结果广播到所有的其他net中去。 虽然总的来说，这样效果比单GPU好，但是net之间的参数传递是非常耗时的。
+    TODO： 尽量直接share Variables 而不是靠传递的。
+    :return:
+    '''
+    translates = []
+    for i in range(1, num_devices):
+        translate = [tf.assign(e1, e2) for e1, e2 in
+                     zip(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, 'CNN_mnist_%d'%i),
+                         tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, 'CNN_mnist_0'))]
+        translates.append(translate)
+    return translates
 
 if __name__ == '__main__':
     apply_gradient_op, nets = build_graph()
-    translate = [tf.assign(e1, e2) for e1, e2 in zip(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, 'CNN_mnist_1'),
-                                                     tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, 'CNN_mnist_0'))]
 
+    translations = value_translation()
     start = time.time()
     with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
         sess.run(tf.global_variables_initializer())
@@ -158,15 +170,10 @@ if __name__ == '__main__':
                 feed_data[net.image] = batch_xs
                 feed_data[net.label] = batch_ys
             sess.run(apply_gradient_op, feed_dict=feed_data)
-            sess.run(translate)
+
+            for op in translations:
+                sess.run(op)
 
             if i % 50 == 0:
-                # print nets[0].cross_entropy.name
                 print(time.time()-start, sess.run([nets[0].accuracy, nets[0].cross_entropy], feed_dict={nets[0].image:mnist.test.images,
                                                             nets[0].label: mnist.test.labels}))
-
-
-# sess.run(apply_gradient_op, feed_dict={nets[0].image:batch_xs,
-#                                                    nets[0].label: batch_ys,
-#                                                    nets[1].image:batch_xs1,
-#                                                    nets[1].label: batch_ys1})
