@@ -1,6 +1,11 @@
+# -*- coding: utf-8 -*
 import tensorflow as tf
 
-
+'''
+    tf.Variable: 如果name重复，会自动在原name后天添加，即命名一个新的，而tf.get_variable则不会，所以可能会报错
+    tf.name_scope 面对get_variable不起作用，对tf.Variable来说会在前面加name_scope的前缀
+    tf.variable_scope 对get_variable和Variable都会加name_scope的前缀
+'''
 def name_scope():
     with tf.name_scope("a_name_scope"):
         initializer = tf.constant_initializer(value=1)
@@ -50,4 +55,4 @@ def variable_scope():
             print sess.run(v)
 
 
-variable_scope()
+name_scope()

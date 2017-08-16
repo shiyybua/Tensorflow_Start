@@ -11,16 +11,17 @@ epoch = 20000
 batch_size = 64
 layer_id = 0
 num_devices = 2
-device = 'gpu'
+device = 'cpu'
 
 
 class Net:
     def __init__(self, net_scope):
-        with tf.name_scope(net_scope):
+        # 这里能用name_scope 这对后面的reuse很重要。
+        with tf.variable_scope(net_scope):
             W_conv1 = self.init_Weights([5,5,1,32])
             b_conv1 = self.init_Biases([32])
-            self.image = tf.placeholder(shape=[None, 784], dtype=tf.float32) / 255
-            self.label = tf.placeholder(shape=[None, 10], dtype=tf.float32)
+            self.image = tf.get_variable('i', shape=[batch_size, 784], dtype=tf.float32, trainable=False)
+            self.label = tf.get_variable('l', shape=[batch_size, 10], dtype=tf.float32, trainable=False)
 
             images = tf.reshape(self.image, [-1,28,28,1])
             conv1 = self.conv_layer(images, W_conv1, b_conv1)
@@ -115,27 +116,41 @@ def average_gradients(tower_grads):
 
 
 def build_graph():
-    optimizer = tf.train.AdamOptimizer(1e-4)
+    net = Net("net")
+    image_variables = []
+    label_variables = []
+    assign_ops = []
+
+    for i in range(num_devices):
+        image_variables.append(tf.placeholder(shape=[None, 784], dtype=tf.float32))
+        label_variables.append(tf.placeholder(shape=[None, 10], dtype=tf.float32))
+
+
+    # optimizer = tf.train.AdamOptimizer(1e-4)
     with tf.variable_scope(tf.get_variable_scope()):
-        # optimizer = tf.train.GradientDescentOptimizer(0.1)
+        optimizer = tf.train.GradientDescentOptimizer(0.1)
         tower_grads = []
-        nets = []
         for i in xrange(num_devices):
             with tf.device('/%s:%d' % (device,i)):
                 with tf.name_scope('%s_%d' % ("CNN_mnist", i)) as scope:
-                    net = Net(scope)
-                    nets.append(net)
+                    assign_ops.append(tf.assign(net.image, image_variables[i]))
+
+                    assign_ops.append(tf.assign(net.label, label_variables[i]))
+
                     loss = net.cross_entropy
                     # 这里reuse_variables没有用是因为 我们并没有用同一个net
-                    # tf.get_variable_scope().reuse_variables()
+                    tf.get_variable_scope().reuse_variables()
                     gradient = optimizer.compute_gradients(loss)
-                    tower_grads.append(gradient[-8:])
+                    tower_grads.append(gradient)
 
         grads = average_gradients(tower_grads)
         # 感觉这个grads没有分发出来, 或者找出variable share的代码。
         apply_gradient_op = optimizer.apply_gradients(grads)
 
-    return apply_gradient_op, nets
+    ops_group = tuple(assign_ops)
+    ops_group += tuple([apply_gradient_op])
+
+    return tf.group(*ops_group), net, image_variables, label_variables
 
 
 def value_translation():
@@ -153,7 +168,7 @@ def value_translation():
     return translates
 
 if __name__ == '__main__':
-    apply_gradient_op, nets = build_graph()
+    operations, net, image_variables, label_variables = build_graph()
 
     translations = value_translation()
     start = time.time()
@@ -161,15 +176,15 @@ if __name__ == '__main__':
         sess.run(tf.global_variables_initializer())
         for i in range(epoch):
             feed_data = {}
-            for index, net in enumerate(nets):
+            for index in range(num_devices):
                 batch_xs, batch_ys = mnist.train.next_batch(10)
-                feed_data[net.image] = batch_xs
-                feed_data[net.label] = batch_ys
-            sess.run(apply_gradient_op, feed_dict=feed_data)
+                feed_data[image_variables[index]] = batch_xs / 255
+                feed_data[label_variables[index]] = batch_ys / 255
+            sess.run(operations, feed_dict=feed_data)
 
-            for op in translations:
-                sess.run(op)
+            # for op in translations:
+            #     sess.run(op)
 
             if i % 50 == 0:
-                print(time.time()-start, sess.run([nets[0].accuracy, nets[0].cross_entropy], feed_dict={nets[0].image:mnist.test.images,
-                                                            nets[0].label: mnist.test.labels}))
+                print(time.time()-start, sess.run([net.cross_entropy], feed_dict={net.image:mnist.test.images,
+                                                            net.label: mnist.test.labels}))
