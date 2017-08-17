@@ -17,7 +17,7 @@ class DQN:
         self.image_shape = image_shape
         self.net_name = net_name
         self.observation = tf.placeholder(dtype=tf.float32, shape=[None] + self.image_shape) / 255.0
-        self.target_value = tf.placeholder(dtype=tf.float32, shape=[None, 1])
+        self.target_value = tf.placeholder(dtype=tf.float32, shape=[None, 4])
         self.action = tf.placeholder(dtype=tf.float32, shape=[None, 4])
         self.replace_target_iter = 0
         self.steps = 0
@@ -106,10 +106,10 @@ class DQN:
             self.net_ouput = self.fc_layer(fc1_ouput, fc2_W, fc2_b, tf.nn.tanh)
 
         with tf.name_scope("loss"):
-            Q_action = tf.reduce_sum(tf.multiply(self.net_ouput, self.action), axis=1)
+            # Q_action = tf.reduce_sum(tf.multiply(self.net_ouput, self.action), axis=1)
             # Q_action = self.net_ouput
-            self.loss = tf.reduce_mean(tf.square(self.target_value - Q_action))
-            optimizer = tf.train.RMSPropOptimizer(0.01)
+            self.loss = tf.reduce_mean(tf.square(self.target_value - self.net_ouput))
+            optimizer = tf.train.AdamOptimizer()
             self.train = optimizer.minimize(self.loss)
 
     def choose_action(self, observation):
@@ -133,9 +133,17 @@ class DQN:
         next_observation_batch = [t[3] for t in batch]
 
         q_next = self.sess.run(target_net.net_ouput, feed_dict={target_net.observation: next_observation_batch})
-        y = reward_batch + self.gamma * np.max(q_next, axis=1)
+        # y = reward_batch + self.gamma * np.max(q_next, axis=1)
         # y = reward_batch + self.gamma * q_next
-        y = y.reshape([self.batch_size,1])
+
+        q_next = self.gamma * q_next
+        for i in range(self.batch_size):
+            element = q_next[i]
+            max_arg = np.argmax(element)
+            q_next[i][max_arg] += reward_batch[i]
+
+        y = q_next
+        # y = y.reshape([self.batch_size,1])
 
         # convert action into one-hot representation
         action_batch = np.eye(4)[action_batch]
@@ -149,7 +157,8 @@ class DQN:
             self.sess.run(translate)
             self.replace_target_iter = 0
 
-            print self.sess.run(self.loss, feed_dict={self.observation: observation_batch, self.target_value: y,
+        if self.replace_target_iter % 20 == 0:
+            print 'loss:', self.sess.run(self.loss, feed_dict={self.observation: observation_batch, self.target_value: y,
                                                       self.action: action_batch})
 
         tf.summary.scalar('reward', sum(reward_batch) * 1.0 / len(reward_batch))
