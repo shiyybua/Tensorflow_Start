@@ -6,18 +6,18 @@ import matplotlib.pyplot as plt
 
 FLAGS = utils.FLAGS
 BATCH_SIZE = 64
-
-images, labels = [], []
-image_holder = tf.placeholder(tf.float32, [ BATCH_SIZE, 32, 32, 3 ] )
-init = tf.global_variables_initializer()
-with tf.Session() as sess:
-    sess.run(init)
-
-    image, label = utils.build_input(
-        FLAGS.dataset, FLAGS.train_data_path, BATCH_SIZE, FLAGS.mode)
-
-    value = sess.run(image)
-    print value[0]
+#
+# images, labels = [], []
+# image_holder = tf.placeholder(tf.float32, [ BATCH_SIZE, 32, 32, 3 ] )
+# init = tf.global_variables_initializer()
+# with tf.Session() as sess:
+#     sess.run(init)
+#
+#     image, label = utils.build_input(
+#         FLAGS.dataset, FLAGS.train_data_path, BATCH_SIZE, FLAGS.mode)
+#
+#     value = sess.run(image)
+#     print value[0]
 
 
 # PAHT = '../../resource/cifar10/cifar-10-batches-py/data_batch_2'
@@ -43,27 +43,29 @@ with tf.Session() as sess:
 # plt.imshow(X[20])
 # plt.show()
 
-# data_dir = '../../resource/cifar10/cifar-10-batches-bin'
-# import cifar10, cifar10_input
-#
-#
-# image_holder = tf.placeholder( tf.float32, [ 128, 24, 24, 3 ] )
-# images_train, labels_train = cifar10_input.distorted_inputs(data_dir=data_dir, batch_size=128)
-#
-# sess = tf.InteractiveSession()
-# tf.global_variables_initializer().run()
-#
-# tf.train.start_queue_runners()
-#
-#
-# for _ in range(100):
-#   X= sess.run(images_train)
-#   image = sess.run(images_train, feed_dict={images_train: X})
-#   print image.shape
-#   print 'finished'
-#   print image[0]
-#   plt.imshow(image[100])
-#   plt.show()
-#
-#   break
-# sess.close()
+data_dir = '../../resource/cifar10/cifar-10-batches-bin'
+import cifar10, cifar10_input
+
+
+image_holder = tf.placeholder( tf.float32, [ 128, 24, 24, 3 ] )
+images_train, labels_train = cifar10_input.distorted_inputs(data_dir=data_dir, batch_size=128)
+
+sess = tf.InteractiveSession()
+tf.global_variables_initializer().run()
+
+tf.train.start_queue_runners()
+
+
+for _ in range(100):
+  X= sess.run(images_train)
+  print X
+  print '*' * 200
+  image = sess.run(images_train, feed_dict={images_train: X})
+  print image.shape
+  print 'finished'
+  print image[0]
+  plt.imshow(image[100])
+  plt.show()
+
+  break
+sess.close()
