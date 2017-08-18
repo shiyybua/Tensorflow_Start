@@ -25,7 +25,7 @@ class DQN:
         self.gamma = 0.9
         self.epsilon = 0.9
 
-        with tf.name_scope(net_name):
+        with tf.variable_scope(net_name):
             if is_gpu_available is not None:
                 for d in is_gpu_available:
                     with tf.device(d):
@@ -106,9 +106,9 @@ class DQN:
             self.net_ouput = self.fc_layer(fc1_ouput, fc2_W, fc2_b, tf.nn.tanh)
 
         with tf.name_scope("loss"):
-            # Q_action = tf.reduce_sum(tf.multiply(self.net_ouput, self.action), axis=1)
+            Q_action = tf.multiply(self.net_ouput, self.action)
             # Q_action = self.net_ouput
-            self.loss = tf.reduce_mean(tf.square(self.target_value - self.net_ouput))
+            self.loss = tf.reduce_mean(tf.square(self.target_value - Q_action))
             optimizer = tf.train.AdamOptimizer()
             self.train = optimizer.minimize(self.loss)
 
@@ -136,17 +136,24 @@ class DQN:
         # y = reward_batch + self.gamma * np.max(q_next, axis=1)
         # y = reward_batch + self.gamma * q_next
 
-        q_next = self.gamma * q_next
+        # q_next = self.gamma * q_next
         for i in range(self.batch_size):
-            element = q_next[i]
-            max_arg = np.argmax(element)
-            q_next[i][max_arg] += reward_batch[i]
+            max_arg = np.argmax(q_next[i])
+            for j in range(len(q_next[i])):
+                if j == max_arg:
+                    q_next[i][max_arg] *= self.gamma
+                    q_next[i][max_arg] += reward_batch[i]
+                else:
+                    q_next[i][j] = 0
 
         y = q_next
         # y = y.reshape([self.batch_size,1])
 
         # convert action into one-hot representation
-        action_batch = np.eye(4)[action_batch]
+        for i, action in enumerate(action_batch):
+            action_batch[i] = np.eye(4)[action]
+        # action_batch = np.array(action_batch)
+        # print action_batch.shape, y.shape, '*' * 100
         _, summary = self.sess.run([self.train, merged], feed_dict={self.observation: observation_batch, self.target_value:y,
                                              self.action: action_batch})
 
