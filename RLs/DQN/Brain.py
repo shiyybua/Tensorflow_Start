@@ -161,6 +161,9 @@ class DQN:
         if self.replace_target_iter % 500 == 0:
             print 'translated'
             translate = [tf.assign(e1, e2) for e1, e2 in zip(tf.get_collection('target_net'), tf.get_collection('Q_net'))]
+            for e1, e2 in zip(tf.get_collection('target_net'), tf.get_collection('Q_net')):
+                print e1.name, e2.name
+
             self.sess.run(translate)
             self.replace_target_iter = 0
 

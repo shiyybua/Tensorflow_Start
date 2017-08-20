@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*
-import sys
-sys.path.append('/home/caiww/code')
-import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+# import sys
+# sys.path.append('/home/caiww/code')
+# import os
+# os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 import gym
 import tensorflow as tf
-from DQN.Brain import DQN
+from Brain import DQN
 import time
 from state_processor import StateProcessor
 
 from gym import wrappers
 env = gym.make('Breakout-v0')
-env = wrappers.Monitor(env, './video', force=True, video_callable=lambda x: x % 20 == 0)
+env = wrappers.Monitor(env, '../../resource/video', force=True, video_callable=lambda x: x % 20 == 0)
 
 # env = gym.make('Breakout-v0')
 # env.seed(1)     # reproducible.
@@ -21,7 +21,7 @@ epoch = 1000
 print(env.action_space)
 print(env.observation_space)
 
-RESOURCE_PATH = '../resource/DQN/'
+RESOURCE_PATH = '../../resource/DQN/'
 train = True
 is_gpu_available = None #otherwise: e.g. ['/gpu:2', '/gpu:3']
 
