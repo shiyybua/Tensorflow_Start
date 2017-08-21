@@ -16,6 +16,7 @@ labels = tf.placeholder(dtype=tf.int32, shape=[None, 10])
 data_x = tf.split(data, time_step, axis=1)
 cell_forward = tf.contrib.rnn.BasicLSTMCell(num_units)
 cell_backward = tf.contrib.rnn.BasicLSTMCell(num_units)
+print data_x
 outputs, output_state_fw, output_state_bw = static_bidirectional_rnn(cell_forward, cell_backward, data_x, dtype=tf.float32)
 
 # projection:
@@ -34,7 +35,7 @@ accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
-    for i in range(10000):
+    for i in range(1000):
         batch_xs, batch_ys = mnist.train.next_batch(batch_size)
         sess.run(train, feed_dict={data: batch_xs, labels: batch_ys})
 

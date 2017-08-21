@@ -3,6 +3,15 @@ import jieba
 
 DATA_PATH = 'ner_trn'
 
+def turn_numbers(num):
+    chinese_num = ['０', '１', '２', '３', '４', '５', '６', '７', '８', '９']
+    digit_num = ['0','1','2','3','4','5','6','7','8','9']
+    try:
+        position = chinese_num.index(num)
+        return digit_num[position]
+    except ValueError:
+        pass
+    return num
 
 def sent_targets():
     sentences = []
@@ -20,6 +29,7 @@ def sent_targets():
                 tag = []
             else:
                 word, t = line.split(" ")
+                word = turn_numbers(word)
                 sentence.append(word)
                 tag.append(t)
                 uni_tags.add(t)
@@ -29,6 +39,7 @@ def sent_targets():
 
 def retokenizer(path):
     '''
+        把原来ner_trn格式的文件，分成分词后带标注的。
         标记不完全跟着merge走，等merge分词好了在重新标记。
     :return: 
     '''
