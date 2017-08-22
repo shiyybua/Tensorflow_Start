@@ -43,8 +43,8 @@ with tf.Graph().as_default():
     # Train for a fixed number of iterations.
     session.run(tf.global_variables_initializer())
     for i in range(1000):
-      tf_unary_scores, tf_transition_params, _ = session.run(
-          [unary_scores, transition_params, train_op])
+      tf_unary_scores, tf_transition_params, _, losses = session.run(
+          [unary_scores, transition_params, train_op,loss])
       if i % 100 == 0:
         correct_labels = 0
         total_labels = 0

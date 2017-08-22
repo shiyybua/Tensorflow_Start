@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*
 import tensorflow as tf
+import numpy as np
 
 def ph1():
     # shape是几维, feed进来的数据也要是几维的。
@@ -10,7 +11,7 @@ def ph1():
     init = tf.initialize_all_variables()
     with tf.Session() as sess:
         sess.run(init)
-        print sess.run(z, feed_dict={x:[1]})
+        print sess.run(z, feed_dict={x:np.array([1.0])})
 
 def ph2():
     # 把placeholder放在数组里的时候，feed也一个个的feed就行了。
@@ -23,4 +24,4 @@ def ph2():
         sess.run(init)
         print sess.run(z, feed_dict={x[0]:[1], x[1]:[1], x[2]:[1]})
 
-ph2()
+ph1()

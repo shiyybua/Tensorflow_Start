@@ -21,7 +21,6 @@ class NER_net:
             self._build_net()
 
     def _build_net(self):
-        # ========================  Bi-RNN  ========================
         self.x = tf.placeholder(tf.float32, [None, time_step, unit_num])
         self.y = tf.placeholder(tf.int32, [None, time_step])
         seq_x = tf.reshape(self.x, [-1, time_step * unit_num])
@@ -39,8 +38,6 @@ class NER_net:
         x_reshape = tf.reshape(outputs, [-1, 2 * unit_num])
         projection = tf.matmul(x_reshape, W) + b
 
-
-
         output = tf.reshape(projection, [time_step, BATCH_SIZE, TAGS_NUM])
         self.outputs = tf.transpose(output, [1,0,2]) #BATCH_SIZE * time_step * TAGS_NUM
 
@@ -50,8 +47,6 @@ class NER_net:
         # Add a training op to tune the parameters.
         self.loss = tf.reduce_mean(-self.log_likelihood)
         self.train_op = tf.train.AdamOptimizer().minimize(self.loss)
-
-
 
 
 def get_batch():
