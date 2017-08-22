@@ -5,6 +5,8 @@ import random
 from tensorflow.contrib.rnn import static_bidirectional_rnn
 from tensorflow.contrib.rnn import DropoutWrapper
 
+
+DATA_PATH = '../retokenized_corpus.txt'
 # FEATURE_NUM = 64
 BATCH_SIZE = 128
 EMBEDDING_SIZE = unit_num = 300         # 默认词向量的大小等于RNN(每个time step) 和 CNN(列) 中神经单元的个数, 为了避免混淆model中全部用unit_num表示。
@@ -16,7 +18,7 @@ tags = np.random.randint(0,9,[5000, MAX_SEQUENCE_SIZE])
 TAGS_NUM = 10
 sequence_lengths = np.full(BATCH_SIZE, MAX_SEQUENCE_SIZE - 1, dtype=np.int32)
 
-# TODO: add dropout
+
 class NER_net:
     def __init__(self, scope_name):
         with tf.variable_scope(scope_name) as scope:
