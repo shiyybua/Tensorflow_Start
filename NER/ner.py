@@ -12,16 +12,15 @@ word_embedding = np.random.random([1000, EMBEDDING_SIZE])
 sentences = np.random.randint(0, 1000, [5000, MAX_SEQUENCE_SIZE])
 tags = np.random.randint(0,9,[5000, MAX_SEQUENCE_SIZE])
 TAGS_NUM = 10
-sequence_lengths = np.full(BATCH_SIZE, 1000 - 1, dtype=np.int32)
+sequence_lengths = np.full(BATCH_SIZE, MAX_SEQUENCE_SIZE - 1, dtype=np.int32)
 
-
+# TODO: add dropout
 class NER_net:
     def __init__(self, scope_name):
         with tf.variable_scope(scope_name) as scope:
             self._build_net()
 
     def _build_net(self):
-        # ========================  Bi-RNN  ========================
         self.x = tf.placeholder(tf.float32, [None, time_step, unit_num])
         self.y = tf.placeholder(tf.int32, [None, time_step])
         seq_x = tf.reshape(self.x, [-1, time_step * unit_num])
@@ -30,19 +29,37 @@ class NER_net:
         cell_forward = tf.contrib.rnn.BasicLSTMCell(unit_num)
         cell_backward = tf.contrib.rnn.BasicLSTMCell(unit_num)
 
+        # outputs:(time_step, batch_size, 2 * num_units)
         outputs, output_state_fw, output_state_bw = \
             static_bidirectional_rnn(cell_forward, cell_backward, seq_x, dtype=tf.float32)
+        # Convert (time_step, batch_size, 2 * num_units) to (batch_size, time_step, 2 * num_units)
+        rnn_features = tf.transpose(outputs, [1,0,2])
+        rnn_features = tf.reshape(rnn_features, [-1, 2 * unit_num])
 
+        # CNN
+        # You could use more advanced kernel, which is introduced in
+        # https://github.com/tensorflow/models/blob/master/tutorials/image/cifar10/cifar10.py
+        cnn_W = tf.get_variable("cnn_w", shape=[EMBEDDING_SIZE, 3, 1, 2])
+        cnn_b = tf.get_variable("cnn_b", shape=[2])
+        # it is better to make the units number equal to the RNN unit number
+        # cnn_input : (batch_size, time_step, unit_num, 1)
+        cnn_input = tf.expand_dims(self.x,axis=3)
+        # conv_features : (batch_size, time_step, unit_num, 2)
+        conv_features = tf.nn.conv2d(cnn_input, cnn_W, strides=[1, 1, 1, 1], padding='SAME') + cnn_b
+        conv_features = tf.reshape(conv_features, [-1, unit_num * 2])
+
+        all_feature = tf.concat([rnn_features, conv_features], axis=1)
+
+        # conv_features = tf.transpose(conv_features, [])
+        # reshape_cnn_features = tf.reshape(conv_features, [])
         # projection:
-        W = tf.get_variable("projection_w", [2 * unit_num, TAGS_NUM])
+        W = tf.get_variable("projection_w", [4 * unit_num, TAGS_NUM])
         b = tf.get_variable("projection_b", [TAGS_NUM])
-        x_reshape = tf.reshape(outputs, [-1, 2 * unit_num])
-        projection = tf.matmul(x_reshape, W) + b
 
+        projection = tf.matmul(all_feature, W) + b
 
-
-        output = tf.reshape(projection, [time_step, BATCH_SIZE, TAGS_NUM])
-        self.outputs = tf.transpose(output, [1,0,2]) #BATCH_SIZE * time_step * TAGS_NUM
+        self.outputs = tf.reshape(projection, [-1, time_step, TAGS_NUM])
+        # self.outputs = tf.transpose(output, [1,0,2]) #BATCH_SIZE * time_step * TAGS_NUM
 
         self.log_likelihood, self.transition_params = tf.contrib.crf.crf_log_likelihood(
             self.outputs, self.y, sequence_lengths)
@@ -50,8 +67,6 @@ class NER_net:
         # Add a training op to tune the parameters.
         self.loss = tf.reduce_mean(-self.log_likelihood)
         self.train_op = tf.train.AdamOptimizer().minimize(self.loss)
-
-
 
 
 def get_batch():
@@ -73,7 +88,7 @@ if __name__ == '__main__':
     with tf.Session() as sess:
         init = tf.global_variables_initializer()
         sess.run(init)
-        for i in range(1000):
+        for i in range(2000):
           batch_x, batch_y = get_batch()
           tf_unary_scores, tf_transition_params, _, losses = sess.run(
               [net.outputs, net.transition_params, net.train_op, net.loss], feed_dict={net.x:batch_x, net.y:batch_y})
@@ -86,7 +101,7 @@ if __name__ == '__main__':
             for tf_unary_scores_, y_, sequence_length_ in zip(tf_unary_scores, batch_y,
                                                               sequence_lengths):
 
-              # Remove padding from the scores and tag sequence.
+              # # Remove padding from the scores and tag sequence.
               tf_unary_scores_ = tf_unary_scores_[:sequence_length_]
               y_ = y_[:sequence_length_]
 

@@ -18,7 +18,7 @@ def init_Weights(shape):
 
 
 def init_Biases(shape):
-    # constant is better.
+    # constant is better
     initial = tf.constant(0.1, shape=shape)
     return tf.Variable(initial)
 

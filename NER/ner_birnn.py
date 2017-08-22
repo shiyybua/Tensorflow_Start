@@ -12,9 +12,9 @@ word_embedding = np.random.random([1000, EMBEDDING_SIZE])
 sentences = np.random.randint(0, 1000, [5000, MAX_SEQUENCE_SIZE])
 tags = np.random.randint(0,9,[5000, MAX_SEQUENCE_SIZE])
 TAGS_NUM = 10
-sequence_lengths = np.full(BATCH_SIZE, 1000 - 1, dtype=np.int32)
+sequence_lengths = np.full(BATCH_SIZE, MAX_SEQUENCE_SIZE - 1, dtype=np.int32)
 
-
+# TODO: add dropout
 class NER_net:
     def __init__(self, scope_name):
         with tf.variable_scope(scope_name) as scope:
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     with tf.Session() as sess:
         init = tf.global_variables_initializer()
         sess.run(init)
-        for i in range(1000):
+        for i in range(2000):
           batch_x, batch_y = get_batch()
           tf_unary_scores, tf_transition_params, _, losses = sess.run(
               [net.outputs, net.transition_params, net.train_op, net.loss], feed_dict={net.x:batch_x, net.y:batch_y})
@@ -81,7 +81,7 @@ if __name__ == '__main__':
             for tf_unary_scores_, y_, sequence_length_ in zip(tf_unary_scores, batch_y,
                                                               sequence_lengths):
 
-              # Remove padding from the scores and tag sequence.
+              # # Remove padding from the scores and tag sequence.
               tf_unary_scores_ = tf_unary_scores_[:sequence_length_]
               y_ = y_[:sequence_length_]
 
