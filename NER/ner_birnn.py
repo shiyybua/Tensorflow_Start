@@ -3,11 +3,13 @@ import tensorflow as tf
 import numpy as np
 import random
 from tensorflow.contrib.rnn import static_bidirectional_rnn
+from tensorflow.contrib.rnn import DropoutWrapper
 
 # FEATURE_NUM = 64
 BATCH_SIZE = 128
-EMBEDDING_SIZE = unit_num = 300
-MAX_SEQUENCE_SIZE = time_step = 30
+EMBEDDING_SIZE = unit_num = 300         # 默认词向量的大小等于RNN(每个time step) 和 CNN(列) 中神经单元的个数, 为了避免混淆model中全部用unit_num表示。
+MAX_SEQUENCE_SIZE = time_step = 30      # 每个句子的最大长度和time_step一样,为了避免混淆model中全部用time_step表示。
+DROPOUT_RATE = 0.5
 word_embedding = np.random.random([1000, EMBEDDING_SIZE])
 sentences = np.random.randint(0, 1000, [5000, MAX_SEQUENCE_SIZE])
 tags = np.random.randint(0,9,[5000, MAX_SEQUENCE_SIZE])
@@ -28,6 +30,8 @@ class NER_net:
 
         cell_forward = tf.contrib.rnn.BasicLSTMCell(unit_num)
         cell_backward = tf.contrib.rnn.BasicLSTMCell(unit_num)
+        cell_forward = DropoutWrapper(cell_forward, input_keep_prob=1.0, output_keep_prob=DROPOUT_RATE)
+        cell_backward = DropoutWrapper(cell_backward, input_keep_prob=1.0, output_keep_prob=DROPOUT_RATE)
 
         outputs, output_state_fw, output_state_bw = \
             static_bidirectional_rnn(cell_forward, cell_backward, seq_x, dtype=tf.float32)
@@ -51,7 +55,7 @@ class NER_net:
 
 def get_batch():
     sample_ids = random.sample(range(len(word_embedding)), BATCH_SIZE)
-    x = sentences[sample_ids]   # 64 * MAX_SEQUENCE_SIZE
+    x = sentences[sample_ids]   # 64 * time_step
     y = tags[sample_ids]
     batch = []
     for sentence_ids in x:
