@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*
 import numpy as np
+import random
 
 W2V_PATH = '../resource/wiki.zh.vec'
 CORPUS_PATH = 'data_precess/retokenized_corpus.txt'
@@ -52,7 +53,7 @@ def build_word_tag_tables():
     return word_to_id_table, id_to_word_table, tag_to_id_table, id_to_tag_table
 
 
-def get_sentences(word_to_id_table, tag_to_id_table, max_sequence=30):
+def get_sentences(word_to_id_table, tag_to_id_table, max_sequence=100):
     '''
 
     :param word_to_id_table: 词转id
@@ -67,9 +68,12 @@ def get_sentences(word_to_id_table, tag_to_id_table, max_sequence=30):
     with open(CORPUS_PATH, 'r') as corpus:
         sentence = []
         tag = []
+        l = []
         for line in corpus.readlines():
             line = line.strip()
             if line == '':
+                l.append(len(sentence))
+
                 # 如果大于最大长度则截断
                 if len(sentence) > max_sequence:
                     sentence = sentence[:max_sequence]
@@ -87,14 +91,28 @@ def get_sentences(word_to_id_table, tag_to_id_table, max_sequence=30):
                 word, t = line.split(" ")
                 sentence.append(word_to_id_table[word])
                 tag.append(tag_to_id_table[t])
-
+    # np.save(open('temp', 'w'), l)
     return np.array(sentences), np.array(tags), padding_id
 
 
+def get_batches(all_sentences, all_tags, id_to_word_table, embeddings, batch_size):
+    # TODO: UNKNOW
+    sample_ids = random.sample(range(len(all_sentences)), batch_size)
+    x_batch_ids = all_sentences[sample_ids]
+    y_batch = all_tags[sample_ids]
+    x_batch = []
+    for sentence in x_batch_ids:
+        word_embeddings = []
+        for word_id in sentence:
+            word_embeddings.append()
 
-# word_to_id_table, id_to_word_table, tag_to_id_table, id_to_tag_table = build_word_tag_tables()
-# x,y,_ = get_sentences(word_to_id_table, tag_to_id_table)
-#
-# print x.shape, y.shape
+
+
+if __name__ == '__main__':
+
+    word_to_id_table, id_to_word_table, tag_to_id_table, id_to_tag_table = build_word_tag_tables()
+    x,y,_ = get_sentences(word_to_id_table, tag_to_id_table)
+
+    print x.shape, y.shape
 
 

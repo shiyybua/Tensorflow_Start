@@ -10,7 +10,7 @@ DATA_PATH = '../retokenized_corpus.txt'
 # FEATURE_NUM = 64
 BATCH_SIZE = 128
 EMBEDDING_SIZE = unit_num = 300         # 默认词向量的大小等于RNN(每个time step) 和 CNN(列) 中神经单元的个数, 为了避免混淆model中全部用unit_num表示。
-MAX_SEQUENCE_SIZE = time_step = 30      # 每个句子的最大长度和time_step一样,为了避免混淆model中全部用time_step表示。
+MAX_SEQUENCE_SIZE = time_step = 100      # 每个句子的最大长度和time_step一样,为了避免混淆model中全部用time_step表示。
 DROPOUT_RATE = 0.5
 word_embedding = np.random.random([1000, EMBEDDING_SIZE])
 sentences = np.random.randint(0, 1000, [5000, MAX_SEQUENCE_SIZE])

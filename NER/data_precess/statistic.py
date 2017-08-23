@@ -1,11 +1,31 @@
 # -*- coding: utf-8 -*
 import jieba
 
-DATA_PATH = 'ner_trn'
+DATA_PATH = './ner_trn'
+
+def split_sentence():
+    data = []
+    with open(DATA_PATH, 'r') as corpus:
+        lines = corpus.readlines()
+        for index in range(len(lines) - 1):
+            curent = lines[index]
+            next = lines[index + 1].strip()
+            data.append(curent)
+            if next == '': continue
+            if curent != '\n':
+                word, t = curent.split()
+                if word == '。':
+                    data.append('\n')
+        data.append(lines[-1])
+
+    with open(DATA_PATH, 'w') as corpus:
+        for e in data:
+            corpus.write(e)
+
 
 def turn_numbers(num):
-    chinese_num = ['０', '１', '２', '３', '４', '５', '６', '７', '８', '９']
-    digit_num = ['0','1','2','3','4','5','6','7','8','9']
+    chinese_num = ['０', '１', '２', '３', '４', '５', '６', '７', '８', '９','．']
+    digit_num = ['0','1','2','3','4','5','6','7','8','9','.']
     try:
         position = chinese_num.index(num)
         return digit_num[position]
@@ -109,6 +129,7 @@ if __name__ == '__main__':
         print len(sentences), len(tags)
         print uni_tags, len(uni_tags)
     elif operation == 'retokenizer':
+        split_sentence()
         retokenizer('./retokenized_corpus.txt')
 
 
