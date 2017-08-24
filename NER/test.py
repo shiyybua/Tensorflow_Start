@@ -15,3 +15,5 @@ for e in arr:
 print data
 print sum(data)
 print len(arr)
+unknown = np.random.normal(size=(300))
+print unknown
