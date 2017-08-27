@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*
 import numpy as np
+import jieba
 import random
 
 W2V_PATH = '../resource/wiki.zh.vec'
 CORPUS_PATH = 'data_precess/retokenized_corpus.txt'
+TEST_DATA_PATH = 'test.txt'
 
 embeddings_size = 300
 unknown = np.random.normal(size=(embeddings_size))
@@ -138,6 +140,32 @@ def display_predict(sequence, viterbi_sequence, id_to_word_table, id_to_tag_tabl
     for s, t in zip(sequence, viterbi_sequence):
         print id_to_word_table[s], '('+id_to_tag_table[t]+') ',
     print
+
+
+def tokenizer(sentence):
+    return [word.encode('utf8') for word in jieba.cut(sentence)]
+
+
+def get_data_from_files(embeddings):
+    '''
+    从文件中读取待测试的句子，把它们转换成词向量。
+    :param embeddings: 预训练好的词向量字典。
+    :return: 
+    '''
+    with open(TEST_DATA_PATH, 'r') as data:
+        for line in data.readlines():
+            word_embedding = []
+            line = line.strip()
+            words = tokenizer(line)
+            for w in words:
+                emb = embeddings.get(w)
+                if emb is None:
+                    word_embedding.append(unknown)
+                else:
+                    word_embedding.append(emb)
+            yield np.array([word_embedding])
+
+
 
 
 

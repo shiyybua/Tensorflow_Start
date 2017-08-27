@@ -118,7 +118,29 @@ def load_checkpoint():
         saver.restore(sess, path)
         print sess.run(W), sess.run(b)
 
-#
+def load_checkpoint2():
+    W = tf.Variable(tf.random_uniform([3, 1], -0.1, 1.0))
+    b = tf.Variable(tf.zeros([1]))
+
+    '''
+        或者是：
+        :
+    '''
+    ckpt = tf.train.get_checkpoint_state('model/checkpoints/')
+
+
+    # path = tf.train.latest_checkpoint('/home/cai/Desktop/tflearn/examples/nlp/model/', latest_filename=None)
+    saver = tf.train.Saver()
+    with tf.Session() as sess:
+        if ckpt != None:
+            print ckpt, '*' * 100
+            path = ckpt.model_checkpoint_path
+            saver.restore(sess, path)
+            print sess.run(W), sess.run(b)
+        else:
+            sess.run(tf.global_variables_initializer())
+            print sess.run(W), sess.run(b)
+
 def load_2_models():
     W = tf.Variable(tf.random_uniform([3, 1], -0.1, 1.0))
     b = tf.Variable(tf.zeros([1]))
@@ -139,8 +161,8 @@ def load_2_models():
 
 # 读取2个model，但是要放在2个session里面
 
-load_2_models()
-# load_checkpoint()
+# load_2_models()
+load_checkpoint2()
 # loader()
 
 # sgd_saver()
