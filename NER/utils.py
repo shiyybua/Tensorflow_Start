@@ -140,34 +140,43 @@ def display_predict(sequence, viterbi_sequence, id_to_word_table, id_to_tag_tabl
     for s, t in zip(sequence, viterbi_sequence):
         print id_to_word_table[s], '('+id_to_tag_table[t]+') ',
     print
+    print ''.join([id_to_word_table[s] for s in sequence])
 
 
 def tokenizer(sentence):
     return [word.encode('utf8') for word in jieba.cut(sentence)]
 
 
-def get_data_from_files(embeddings):
+def get_data_from_files(embeddings, fake_label_shape, max_sequence=100):
     '''
     从文件中读取待测试的句子，把它们转换成词向量。
     :param embeddings: 预训练好的词向量字典。
-    :return: 
+    :return: padded data
     '''
+
+    fake_data = np.zeros(shape=fake_label_shape,dtype=np.int)
     with open(TEST_DATA_PATH, 'r') as data:
         for line in data.readlines():
+            actual_length = 0
             word_embedding = []
             line = line.strip()
             words = tokenizer(line)
+
             for w in words:
                 emb = embeddings.get(w)
                 if emb is None:
                     word_embedding.append(unknown)
                 else:
                     word_embedding.append(emb)
-            yield np.array([word_embedding])
+                actual_length += 1
 
-
-
-
+            # 如果大于最大长度则截断
+            if len(word_embedding) > max_sequence:
+                word_embedding = word_embedding[:max_sequence]
+            # 否则填充padding
+            else:
+                word_embedding += [padding] * (max_sequence - len(word_embedding))
+            yield np.array([word_embedding]), fake_data, actual_length, words
 
 if __name__ == '__main__':
     embeddings = load_word2vec_embedding()
