@@ -116,10 +116,10 @@ def test(sess, net):
     print 'loading pre-trained model from %s.....' % path
     saver.restore(sess, path)
 
-    for data in utils.get_data_from_files(embeddings, [1, time_step]):
-        x, y, sequence_length_, words = data
+    for data in utils.get_data_from_files(embeddings):
+        x, sequence_length_, words = data
         tf_unary_scores, tf_transition_params = sess.run(
-            [net.outputs, net.transition_params], feed_dict={net.x: x, net.y: y})
+            [net.outputs, net.transition_params], feed_dict={net.x: x})
         tf_unary_scores_ = tf_unary_scores[0][:sequence_length_]
 
         # Compute the highest scoring sequence.
@@ -150,7 +150,7 @@ def test1(sess, net):
     for index, (x, y, sequence_length_) in enumerate(zip(batch_x, batch_y, sequence_lengths)):
 
         tf_unary_scores, tf_transition_params = sess.run(
-            [net.outputs, net.transition_params], feed_dict={net.x: [x], net.y: [y]})
+            [net.outputs, net.transition_params], feed_dict={net.x: [x]})
         tf_unary_scores_ = tf_unary_scores[0][:sequence_length_]
 
         # Compute the highest scoring sequence.

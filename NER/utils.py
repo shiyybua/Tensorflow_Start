@@ -147,14 +147,13 @@ def tokenizer(sentence):
     return [word.encode('utf8') for word in jieba.cut(sentence)]
 
 
-def get_data_from_files(embeddings, fake_label_shape, max_sequence=100):
+def get_data_from_files(embeddings, max_sequence=100):
     '''
     从文件中读取待测试的句子，把它们转换成词向量。
     :param embeddings: 预训练好的词向量字典。
     :return: padded data
     '''
 
-    fake_data = np.zeros(shape=fake_label_shape,dtype=np.int)
     with open(TEST_DATA_PATH, 'r') as data:
         for line in data.readlines():
             actual_length = 0
@@ -176,7 +175,7 @@ def get_data_from_files(embeddings, fake_label_shape, max_sequence=100):
             # 否则填充padding
             else:
                 word_embedding += [padding] * (max_sequence - len(word_embedding))
-            yield np.array([word_embedding]), fake_data, actual_length, words
+            yield np.array([word_embedding]), actual_length, words
 
 if __name__ == '__main__':
     embeddings = load_word2vec_embedding()

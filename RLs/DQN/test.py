@@ -8,6 +8,7 @@ epoch = 1000
 
 print(env.action_space)
 print(env.observation_space)
+# print(env.action_bound)
 
 for episode in range(epoch):
     observation = env.reset()

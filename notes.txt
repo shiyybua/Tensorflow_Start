@@ -7,3 +7,15 @@ tf.stop_gradient() is an operation that acts as the identity function in the for
 accumulated gradient from flowing through that operator in the backward direction. It does not prevent backpropagation
 altogether, but instead prevents an individual tensor from contributing to the gradients that are computed for an
 expression. The documentation for the operation has more details about the operation, and when to use it.
+
+Aug:
+TWE
+NER
+Multi-gpu
+new chit-chat
+help prog
+face dection
+
+beam search decoder:
+    just get topk(beam size) words of logits as output, and pass them to next cell.
+    so the size of cell is not [word_embedding_size, vocab_size] but [word_embedding_size, beam_size(*batch_size)]

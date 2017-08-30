@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*
-# import sys
-# sys.path.append('/home/caiww/code')
-# import os
-# os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+import sys
+sys.path.append('/home/caiww/code')
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 import gym
 import tensorflow as tf
 from Brain import DQN

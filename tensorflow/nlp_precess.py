@@ -15,9 +15,9 @@ def table_lookup():
             tf.tables_initializer().run()
             print sess.run(src_vocab_table.lookup(features))
 
+
 def Data_set():
       def batching_func(x):
-
             return x.padded_batch(
                   3,
                   # The first three entries are the source and target line rows;
@@ -61,6 +61,7 @@ def Data_set():
 
 
             def key_func(src_dataset_v, src_dataset_copy_v):
+                  print src_dataset_v
                   return tf.size(src_dataset_v) % 2 == 0
 
             def reduce_func(window_size, windowed_data):
@@ -96,6 +97,7 @@ def paddding():
     next_element = iterator.get_next()
     with tf.Session() as sess:
         print sess.run(next_element)
+
 
 def test():
       def lambd(x):

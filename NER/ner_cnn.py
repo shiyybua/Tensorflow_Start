@@ -13,8 +13,8 @@ DATA_PATH = '../retokenized_corpus.txt'
 BATCH_SIZE = 128
 EMBEDDING_SIZE = unit_num = 300         # 默认词向量的大小等于RNN(每个time step) 和 CNN(列) 中神经单元的个数, 为了避免混淆model中全部用unit_num表示。
 MAX_SEQUENCE_SIZE = time_step = 100      # 每个句子的最大长度和time_step一样,为了避免混淆model中全部用time_step表示。
-DROPOUT_RATE = 0.5
-EPOCH = 20000
+DROPOUT_RATE = None
+EPOCH = 60000
 
 embeddings = utils.load_word2vec_embedding()
 word_to_id_table, id_to_word_table, tag_to_id_table, id_to_tag_table = utils.build_word_tag_tables()
@@ -134,10 +134,10 @@ def test(sess, net):
     print 'loading pre-trained model from %s.....' % path
     saver.restore(sess, path)
 
-    for data in utils.get_data_from_files(embeddings, [1, time_step]):
-        x, y, sequence_length_, words = data
+    for data in utils.get_data_from_files(embeddings):
+        x, sequence_length_, words = data
         tf_unary_scores, tf_transition_params = sess.run(
-            [net.outputs, net.transition_params], feed_dict={net.x: x, net.y: y})
+            [net.outputs, net.transition_params], feed_dict={net.x: x})
         tf_unary_scores_ = tf_unary_scores[0][:sequence_length_]
 
         # Compute the highest scoring sequence.
@@ -166,9 +166,9 @@ def test1(sess, net):
         utils.get_batches(all_sentences, all_tags, id_to_word_table, embeddings, 10)
 
     for index, (x, y, sequence_length_) in enumerate(zip(batch_x, batch_y, sequence_lengths)):
-
+        # 不需要提供y。
         tf_unary_scores, tf_transition_params = sess.run(
-            [net.outputs, net.transition_params], feed_dict={net.x: [x], net.y: [y]})
+            [net.outputs, net.transition_params], feed_dict={net.x: [x]})
         tf_unary_scores_ = tf_unary_scores[0][:sequence_length_]
 
         # Compute the highest scoring sequence.
@@ -182,7 +182,7 @@ def test1(sess, net):
 
 
 if __name__ == '__main__':
-    action = 'train'
+    action = 'test'
     # the class should be defined outside of tf.Session()
     if action == 'test':
         BATCH_SIZE = 1
@@ -194,7 +194,7 @@ if __name__ == '__main__':
         if action == 'train':
             train(sess, net)
         elif action == 'test':
-            test(sess, net)
+            test1(sess, net)
 
 
 
