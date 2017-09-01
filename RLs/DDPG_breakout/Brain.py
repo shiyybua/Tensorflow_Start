@@ -14,8 +14,8 @@ MAX_MEMORY_SIZE = 7000
 BATCH_SIZE = 64
 GAMMA = 0.99
 TRANSLATE_STEP = 500
-MAX_EPISODES = 70
-MAX_EP_STEPS = 400
+MAX_EPISODES = 700
+MAX_EP_STEPS = 4000
 RENDER = False
 
 from gym import wrappers
@@ -30,12 +30,39 @@ env = wrappers.Monitor(env, './video', force=True, video_callable=lambda x: x % 
 # a_dim = env.action_space.shape[0]   # Box(1,)
 # a_bound = env.action_space.high # high = 2
 
+class StateProcessor():
+    """
+    Processes a raw Atari iamges. Resizes it and converts it to grayscale.
+    """
+    def __init__(self):
+        with tf.variable_scope("state_processor"):
+            self.input_state = tf.placeholder(shape=[210, 160, 3], dtype=tf.uint8)
+            self.output = tf.image.rgb_to_grayscale(self.input_state)
+            self.output = tf.image.crop_to_bounding_box(self.output, 34, 0, 160, 160)
+            self.output = tf.image.resize_images(
+                self.output, [84, 84], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+            self.output = tf.squeeze(self.output)
+
+    def process(self, state, sess=None):
+        """
+        Args:
+            sess: A Tensorflow session object
+            state: A [210, 160, 3] Atari RGB State
+
+        Returns:
+            A processed [84, 84, 1] state representing grayscale values.
+        """
+        sess = sess or tf.get_default_session()
+        out = sess.run(self.output, { self.input_state: state })
+        out = np.reshape(out, [84,84,1])
+        return out
+
 class Net:
-    def __init__(self, image_shape=[84, 84, 1]):
+    def __init__(self, sess, image_shape=[84, 84, 1]):
         self.image_shape = image_shape
         self.epsilon = 0.9
         self.memory = deque(maxlen=MAX_MEMORY_SIZE)
-        self.sess = tf.Session()
+        self.sess = sess
 
         self.state = tf.placeholder(dtype=tf.float32, shape=[None] + self.image_shape) / 255.0
         self.state_ = tf.placeholder(dtype=tf.float32, shape=[None] + self.image_shape) / 255.0
@@ -53,24 +80,22 @@ class Net:
         self.ce_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='critic_net_eval')
         self.ct_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='critic_net_target')
 
-        self.shared_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='shared')
 
         # Action的目的就是要最大化critic的输出值。
         self.action_loss = - tf.reduce_mean(self.critic)
-        self.train_action = tf.train.AdamOptimizer(0.01).minimize(self.action_loss, var_list=self.shared_params)
+        self.train_action = tf.train.AdamOptimizer(0.01).minimize(self.action_loss, var_list=self.ae_params)
 
         self.current_reward = GAMMA * self.critic_ + self.reward
         # Critic的目的是最小化和预期之间的误差, labels, predictions 顺序无所谓
         self.critic_loss = tf.losses.mean_squared_error(labels=self.current_reward, predictions=self.critic)
         self.train_critic = tf.train.AdamOptimizer(0.01).minimize(self.critic_loss, var_list=self.ce_params)
 
-        self.sess.run(tf.global_variables_initializer())
 
         self.translate_counter = 0
 
         self.merged = tf.summary.merge_all()
-        self.train_writer = tf.summary.FileWriter(RESOURCE_PATH + 'DDPG_record',
-                                             self.sess.graph)
+        # self.train_writer = tf.summary.FileWriter(RESOURCE_PATH + 'DDPG_record',
+        #                                      self.sess.graph)
 
     def store(self, state, action, reward, state_):
         state = np.array(state)
@@ -110,23 +135,23 @@ class Net:
             critic_value = tf.contrib.layers.fully_connected(fc1, 4, activation_fn=None, trainable=trainable)
 
             # W_c = tf.get_variable("critic_variable", shape=[1])
-            W_c = tf.get_variable("action_variable", shape=[4, 1], trainable=trainable)
+            W_c = tf.get_variable("critic_variable", shape=[4, 1], trainable=trainable)
             W_a = tf.get_variable("action_variable", shape=[4, 1], trainable=trainable)
             b = tf.get_variable("c_net_b", shape=[1], trainable=trainable)
             q = tf.nn.sigmoid(tf.matmul(critic_value, W_c) + tf.matmul(action, W_a) + b)
-
             return q
 
     def learn(self):
         batch = random.sample(self.memory, BATCH_SIZE)
-        state_batch = [t[0] for t in batch]
-        action_batch = [t[1] for t in batch]
-        reward_batch = [t[2] for t in batch]
-        next_state_batch = [t[3] for t in batch]
+        state_batch = np.array([t[0] for t in batch])
+        action_batch = np.array([t[1] for t in batch])
+        reward_batch = np.array([t[2] for t in batch])
+        next_state_batch = np.array([t[3] for t in batch])
 
         self.sess.run(self.train_action, feed_dict={self.state: state_batch})
         # 即使不feed action_batch是不会报错的，原因是state_batch可以重新算一次action，但是这个新的action值和原来batch里面的值就不一样了。
         # 而且参与运算的variable 设定是只是ce_params，根本就不会更新到action里面的value值。所以直接会导致结果不对。
+        # TODO: action 要是[?, 4]
         self.sess.run(self.train_critic, feed_dict={self.state: state_batch, self.reward: reward_batch,
                                                     self.state_: next_state_batch, self.action: action_batch})
 
@@ -150,7 +175,7 @@ class Net:
 
 
     def choose_action(self, state):
-        state = np.array(state)
+        state = np.array([state])
         action_probs = self.sess.run(self.action, feed_dict={self.state: state})
         if np.random.uniform() < self.epsilon:
             return np.argmax(action_probs)
@@ -159,34 +184,41 @@ class Net:
 
 
 if __name__ == '__main__':
-    ddpg = Net()
-    counter = 0
+    with tf.Session() as sess:
+        ddpg = Net(sess)
+        counter = 0
+        image_processor = StateProcessor()
+        sess.run(tf.global_variables_initializer())
+        for i in range(MAX_EPISODES):
+            s = env.reset()
+            print '*' * 300
+            s = image_processor.process(s)
+            ep_reward = 0
+            for j in range(MAX_EP_STEPS):
+                if RENDER:
+                    env.render()
 
-    for i in range(MAX_EPISODES):
-        s = env.reset()
-        ep_reward = 0
-        for j in range(MAX_EP_STEPS):
-            if RENDER:
-                env.render()
+                # Add exploration noise
+                a = ddpg.choose_action(s)
+                # a = np.random.normal(a, env.action_space.high)
+                s_, r, done, info = env.step(a)
+                s_ = image_processor.process(s_)
 
-            # Add exploration noise
-            a = ddpg.choose_action(s)
-            # a = np.random.normal(a, env.action_space.high)
-            s_, r, done, info = env.step(a)
+                a = np.eye(4)[a]
+                # reward 是否除以10 影响不大。只是更倾向于把值拉到0，1附近
+                ddpg.store(s, a, r, s_)
 
-            # reward 是否除以10 影响不大。只是更倾向于把值拉到0，1附近
-            ddpg.store(s, a, r, s_)
+                if counter > MAX_MEMORY_SIZE:
+                    ddpg.learn()
 
-            if counter > MAX_MEMORY_SIZE:
-                ddpg.learn()
-
-            s = s_
-            ep_reward += r
+                s = s_
+                ep_reward += r
 
 
-            if j == MAX_EP_STEPS - 1 or done:
-                print('Episode:', i, ' Reward: %i' % int(ep_reward))
-                # if ep_reward > -1000: RENDER = True
-                break
+                if done:
+                    print('Episode:', i, ' Reward: %i' % int(ep_reward))
+                    # if ep_reward > -1000: RENDER = True
+                    # env.close()
+                    break
 
-            counter += 1
+                counter += 1

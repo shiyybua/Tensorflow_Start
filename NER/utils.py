@@ -2,14 +2,18 @@
 import numpy as np
 import jieba
 import random
+from collections import defaultdict
 
 W2V_PATH = '../resource/wiki.zh.vec'
 CORPUS_PATH = 'data_precess/retokenized_corpus.txt'
 TEST_DATA_PATH = 'test.txt'
+BUCKET = [(0,10),(10,20),(20,30),(30,40),(40,50),(50,100)]
+unknown_embedding_path = 'unknown_embedding'
+padding_embedding_path = 'padding_embedding'
 
 embeddings_size = 300
-unknown = np.random.normal(size=(embeddings_size))
-padding = np.random.normal(size=(embeddings_size))
+unknown = np.load(open(unknown_embedding_path, 'r'))
+padding = np.load(open(padding_embedding_path, 'r'))
 
 word_unknown_id = 0
 word_padding_id = 1
@@ -63,7 +67,7 @@ def build_word_tag_tables():
     return word_to_id_table, id_to_word_table, tag_to_id_table, id_to_tag_table
 
 
-def get_sentences(word_to_id_table, tag_to_id_table, max_sequence=100):
+def get_sentences(word_to_id_table, tag_to_id_table):
     '''
 
     :param word_to_id_table: 词转id
@@ -84,14 +88,14 @@ def get_sentences(word_to_id_table, tag_to_id_table, max_sequence=100):
             if line == '':
                 l.append(len(sentence))
 
-                # 如果大于最大长度则截断
-                if len(sentence) > max_sequence:
-                    sentence = sentence[:max_sequence]
-                    tag = tag[:max_sequence]
-                # 否则填充padding
-                else:
-                    sentence += [word_padding_id] * (max_sequence - len(sentence))
-                    tag += [tag_padding_id] * (max_sequence - len(tag))
+                # # 如果大于最大长度则截断
+                # if len(sentence) > max_sequence:
+                #     sentence = sentence[:max_sequence]
+                #     tag = tag[:max_sequence]
+                # # 否则填充padding
+                # else:
+                #     sentence += [word_padding_id] * (max_sequence - len(sentence))
+                #     tag += [tag_padding_id] * (max_sequence - len(tag))
 
                 sentences.append(sentence)
                 tags.append(tag)
@@ -105,7 +109,54 @@ def get_sentences(word_to_id_table, tag_to_id_table, max_sequence=100):
     return np.array(sentences), np.array(tags)
 
 
-def get_batches(all_sentences, all_tags, id_to_word_table, embeddings, batch_size):
+def group_by_sentences_padding(all_sentences, all_tags, bucket=BUCKET):
+    '''
+    :param all_sentences: 2维数组， [句子，单词]
+    :param all_tags: 2维数组， [句子，单词对应的tag]
+    :param bucket: e.g. [(0,10),(10,20),(20,30),(30,40),(40,50),(50,100)]
+    :return: 字典{bucket_id：[sentences, tags]}
+            bucket_id表示句子的上限
+    三维数组[bucket_id, 句子, 单词], 三维数组[bucket_id, 句子, 单词对应的tag]
+    '''
+    assert len(all_sentences) == len(all_tags)
+    group = defaultdict(list)
+    for sentence, tag in zip(all_sentences, all_tags):
+        sentence_len = len(sentence)
+        tag_len = len(tag)
+        assert sentence_len == tag_len
+        if sentence_len >= BUCKET[-1][1]:
+            # padding
+            sentence = sentence[:BUCKET[-1][1]]
+            tag = tag[:BUCKET[-1][1]]
+            group[BUCKET[-1][1]].append((sentence, tag))
+            continue
+        for idx, (low, high) in enumerate(bucket):
+            if low <= sentence_len < high:
+                sentence += [word_padding_id] * (high - len(sentence))
+                tag += [tag_padding_id] * (high - len(tag))
+                group[high].append((sentence, tag))
+                break
+
+    return group
+
+
+def get_batches(group, id_to_word_table, embeddings, batch_size):
+    '''
+
+    :param group: 函数group_by_sentences_padding返回的结果
+    :param id_to_word_table:
+    :param embeddings:
+    :param batch_size:
+    :param sample_group_id: 即是group id 也是句子的上限
+    :return:
+    '''
+    sample_group_id = random.randint(0, len(group))
+    all_sentences, all_tags = [], []
+    for sentence, tag in group[sample_group_id]:
+        all_sentences.append(sentence)
+        all_tags.append(tag)
+    all_sentences = np.array(all_sentences)
+    all_tags = np.array(all_tags)
     sample_ids = random.sample(range(len(all_sentences)), batch_size)
     x_batch_ids = all_sentences[sample_ids]
     y_batch = all_tags[sample_ids]
@@ -128,7 +179,7 @@ def get_batches(all_sentences, all_tags, id_to_word_table, embeddings, batch_siz
         x_batch.append(word_embeddings)
     # 得到每个句子的实际长度。
 
-    return np.array(x_batch), np.array(y_batch), np.array(sentence_length), np.array(x_batch_ids)
+    return np.array(x_batch), np.array(y_batch), np.array(sentence_length), np.array(x_batch_ids), sample_group_id
 
 
 def display_predict(sequence, viterbi_sequence, id_to_word_table, id_to_tag_table):
@@ -178,21 +229,17 @@ def get_data_from_files(embeddings, max_sequence=100):
             yield np.array([word_embedding]), actual_length, words
 
 if __name__ == '__main__':
-    embeddings = load_word2vec_embedding()
+    # embeddings = load_word2vec_embedding()
+    print 'doing...'
     word_to_id_table, id_to_word_table, tag_to_id_table, id_to_tag_table = build_word_tag_tables()
     all_sentences, all_tags = get_sentences(word_to_id_table, tag_to_id_table)
-    x_batch, y_batch,sequence_lengths,_ = get_batches(all_sentences, all_tags, id_to_word_table, embeddings, 64)
+    group = group_by_sentences_padding(all_sentences, all_tags)
+    # x_batch, y_batch,sequence_lengths,_ = get_batches(group, id_to_word_table, embeddings, 64)
+    # a = [k for k, v in group.items()]
+    # print a
+    # print sequence_lengths
+    # print x_batch.shape
+    # print y_batch.shape
 
-    print x_batch.shape, y_batch.shape
-    print sequence_lengths[:5]
-    print len(tag_to_id_table)
-    print x_batch[0][0]
-    # for e in all_sentences[0]:
-    #     print id_to_word_table[e],
-    for e in y_batch[0]:
-        if e != 20945:
-            print id_to_tag_table[e],
-
-    print
 
 

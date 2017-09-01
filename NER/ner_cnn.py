@@ -12,14 +12,15 @@ DATA_PATH = '../retokenized_corpus.txt'
 # FEATURE_NUM = 64
 BATCH_SIZE = 128
 EMBEDDING_SIZE = unit_num = 300         # 默认词向量的大小等于RNN(每个time step) 和 CNN(列) 中神经单元的个数, 为了避免混淆model中全部用unit_num表示。
-MAX_SEQUENCE_SIZE = time_step = 100      # 每个句子的最大长度和time_step一样,为了避免混淆model中全部用time_step表示。
+# MAX_SEQUENCE_SIZE = time_step = 100      # 每个句子的最大长度和time_step一样,为了避免混淆model中全部用time_step表示。
 DROPOUT_RATE = None
 EPOCH = 60000
 
 embeddings = utils.load_word2vec_embedding()
 word_to_id_table, id_to_word_table, tag_to_id_table, id_to_tag_table = utils.build_word_tag_tables()
 all_sentences, all_tags = \
-    utils.get_sentences(word_to_id_table, tag_to_id_table, max_sequence=MAX_SEQUENCE_SIZE)
+    utils.get_sentences(word_to_id_table, tag_to_id_table)
+group = utils.group_by_sentences_padding(all_sentences, all_tags)
 
 TAGS_NUM = len(tag_to_id_table)
 
@@ -31,10 +32,11 @@ class NER_net:
             self._build_net()
 
     def _build_net(self):
-        self.x = tf.placeholder(tf.float32, [None, time_step, unit_num])
-        self.y = tf.placeholder(tf.int32, [None, time_step])
-        seq_x = tf.reshape(self.x, [-1, time_step * unit_num])
-        seq_x = tf.split(seq_x, time_step, axis=1)
+        self.time_step = tf.placeholder(tf.int32, 1)
+        self.x = tf.placeholder(tf.float32, [self.batch_size, self.time_step, unit_num])
+        self.y = tf.placeholder(tf.int32, [self.batch_size, self.time_step])
+        seq_x = tf.reshape(self.x, [-1, self.time_step * unit_num])
+        seq_x = tf.split(seq_x, self.time_step, axis=1)
 
         cell_forward = tf.contrib.rnn.BasicLSTMCell(unit_num)
         cell_backward = tf.contrib.rnn.BasicLSTMCell(unit_num)
@@ -70,11 +72,11 @@ class NER_net:
         b = tf.get_variable("projection_b", [TAGS_NUM])
         projection = tf.matmul(all_feature, W) + b
 
-        self.outputs = tf.reshape(projection, [-1, time_step, TAGS_NUM])
+        self.outputs = tf.reshape(projection, [-1, self.time_step, TAGS_NUM])
         # self.outputs = tf.transpose(output, [1,0,2]) #BATCH_SIZE * time_step * TAGS_NUM
 
         self.log_likelihood, self.transition_params = tf.contrib.crf.crf_log_likelihood(
-            self.outputs, self.y, np.array(self.batch_size * [time_step]))
+            self.outputs, self.y, np.array(self.batch_size * [self.time_step]))
 
         # Add a training op to tune the parameters.
         self.loss = tf.reduce_mean(-self.log_likelihood)
@@ -89,11 +91,11 @@ def train(sess, net):
         print 'loading pre-trained model from %s.....' % path
         saver.restore(sess, path)
     for i in range(EPOCH):
-        batch_x, batch_y, sequence_lengths, batch_x_ids = \
-            utils.get_batches(all_sentences, all_tags, id_to_word_table, embeddings, BATCH_SIZE)
+        batch_x, batch_y, sequence_lengths, batch_x_ids, max_length = \
+            utils.get_batches(group, id_to_word_table, embeddings, BATCH_SIZE)
         tf_unary_scores, tf_transition_params, _, losses = sess.run(
             [net.outputs, net.transition_params, net.train_op, net.loss],
-            feed_dict={net.x: batch_x, net.y: batch_y})
+            feed_dict={net.x: batch_x, net.y: batch_y, net.time_step: max_length})
 
         if i % 20 == 0:
             print "loss:", losses
@@ -162,13 +164,13 @@ def test1(sess, net):
     print 'loading pre-trained model from %s.....' % path
     saver.restore(sess, path)
 
-    batch_x, batch_y, sequence_lengths, batch_x_ids = \
-        utils.get_batches(all_sentences, all_tags, id_to_word_table, embeddings, 10)
+    batch_x, batch_y, sequence_lengths, batch_x_ids, max_length = \
+        utils.get_batches(group, id_to_word_table, embeddings, 10)
 
     for index, (x, y, sequence_length_) in enumerate(zip(batch_x, batch_y, sequence_lengths)):
         # 不需要提供y。
         tf_unary_scores, tf_transition_params = sess.run(
-            [net.outputs, net.transition_params], feed_dict={net.x: [x]})
+            [net.outputs, net.transition_params], feed_dict={net.x: [x], net.time_step: max_length})
         tf_unary_scores_ = tf_unary_scores[0][:sequence_length_]
 
         # Compute the highest scoring sequence.

@@ -18,22 +18,8 @@ import collections
 # print len(arr)
 # unknown = np.random.normal(size=(300))
 # print unknown
-
-class BatchedInput(collections.namedtuple("BatchedInput",
-                                          ("initializer",
-                                           "source",
-                                           "target_input",
-                                           "target_output",
-                                           "source_sequence_length",
-                                           "target_sequence_length"))):
-  pass
-
-a = BatchedInput(
-      initializer=1,
-      source=2,
-      target_input=3,
-      target_output=4,
-      source_sequence_length=5,
-      target_sequence_length=6)
-
-print a.initializer
+embeddings_size = 300
+unknown = np.random.normal(size=(embeddings_size))
+padding = np.random.normal(size=(embeddings_size))
+np.save(open('unknown_embedding', 'w'), unknown)
+np.save(open('padding_embedding', 'w'), padding)
